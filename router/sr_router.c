@@ -217,7 +217,7 @@ int sr_handleARPpacket(struct sr_instance* sr,
         ((sr_ethernet_hdr_t *)eth_packet)->ether_type = htons(ethertype_arp);
 
         /* Create IP packet */
-        sr_arp_hdr_t *arp_reply = (sr_ip_hdr_t*) (eth_packet + sizeof(sr_ethernet_hdr_t));
+        sr_arp_hdr_t *arp_reply = (sr_arp_hdr_t*) (eth_packet + sizeof(sr_ethernet_hdr_t));
 
         arp_reply->ar_hrd = htons(arp_hrd_ethernet);             /* format of hardware address   */
         arp_reply->ar_pro = htons(0x0800);             /* format of protocol address   */
@@ -320,7 +320,7 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
       icmp_packet->icmp_sum = cksum(icmp_packet, sizeof(sr_icmp_hdr_t));
   }else{
       /* Take the original ip packet back */
-      sr_icmp_t3_hdr_t *icmp_packet = (sr_icmp_hdr_t *) (ip_packet + sizeof(sr_ip_hdr_t));
+      sr_icmp_t3_hdr_t *icmp_packet = (sr_icmp_t3_hdr_t *) (ip_packet + sizeof(sr_ip_hdr_t));
       memcpy(icmp_packet->data, ori_ip_packet, ICMP_DATA_SIZE);
       icmp_packet->icmp_sum = cksum(icmp_packet, sizeof(sr_icmp_t3_hdr_t));
       icmp_packet->icmp_type = icmp_type;
