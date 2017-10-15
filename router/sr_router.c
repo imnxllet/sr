@@ -319,7 +319,10 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
       icmp_packet->icmp_type = icmp_type;
       icmp_packet->icmp_code = icmp_code;
       icmp_packet->icmp_sum = 0;
-      icmp_packet->icmp_sum = cksum(icmp_packet, sizeof(sr_icmp_hdr_t));
+      /*icmp_packet->icmp_sum = cksum(icmp_packet, sizeof(sr_icmp_hdr_t));*/
+      /*copy...*/
+      icmp_packet->icmp_sum = cksum(icmp_packet, ntohs(ip_packet->ip_len) - (ip_packet->ip_hl * 4));
+      
   }else{
       /* Take the original ip packet back */
       sr_icmp_t3_hdr_t *icmp_packet = (sr_icmp_t3_hdr_t *) (ip_packet + sizeof(sr_ip_hdr_t));
@@ -331,7 +334,7 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
       icmp_packet->icmp_sum = cksum(icmp_packet, sizeof(sr_icmp_t3_hdr_t));
   }
 
-  
+
   printf("Eth pakcet prepared, ready to send...\n");
   print_hdrs(eth_packet, len);
   printf("--------------------------\n");
