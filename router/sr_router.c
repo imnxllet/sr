@@ -251,11 +251,15 @@ int sr_handleARPpacket(struct sr_instance* sr,
 struct sr_if* checkDestIsIface(uint32_t ip, struct sr_instance* sr){
 
     printf("Checking if this is for me...\n");
+    printf("Current IP: ");
+    print_addr_ip_int(ip);
     struct sr_if* if_walker = 0;
     if_walker = sr->if_list;
 
     while(if_walker)
-    {
+    {   
+      printf("\nIface Ip:");
+        print_addr_ip_int(if_walker->ip);
         if(ip == if_walker->ip){
             return if_walker;
         }
