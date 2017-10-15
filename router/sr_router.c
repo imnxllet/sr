@@ -168,12 +168,12 @@ int sr_handleIPpacket(struct sr_instance* sr,
         uint8_t ip_proto = ip_protocol((uint8_t *) ip_packet);
         if (ip_proto == ip_protocol_icmp) { /* ICMP, send echo reply */
           printf("This packet is for me(Echo Req), send echo reply back...\n");
-          return sendICMPmessage(sr, 0, 0, interface, packet);
+          return sendICMPmessage(sr, 0, 0, interface, packet, target_if);
 
 
         }else if(ip_proto == 0x0006 || ip_proto == 0x11){ /* TCP/UDP, Send ICMP Port Unreachable */
           printf("This packet is for me(TCP/UDP), send port unreachable back...\n");
-          return sendICMPmessage(sr, 3, 3, interface, packet);
+          return sendICMPmessage(sr, 3, 3, interface, packet, target_if);
         }else{
           printf("This packet is for me, but type not recognized, drop it...\n");
           return -1;
@@ -271,7 +271,7 @@ struct sr_if* checkDestIsIface(uint32_t ip, struct sr_instance* sr){
 }
 
 int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type, 
-  uint8_t icmp_code, char* iface, uint8_t * ori_packet){
+  uint8_t icmp_code, char* iface, uint8_t * ori_packet, struct sr_if* target_if){
 
   printf("Creating ICMP message..\n");
 
@@ -287,7 +287,7 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
   }
   uint8_t *eth_packet = malloc(len);
   memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_dhost, ((sr_ethernet_hdr_t *)ori_packet)->ether_shost, ETHER_ADDR_LEN);
-  memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_shost, ((sr_ethernet_hdr_t *)ori_packet)->ether_dhost, ETHER_ADDR_LEN);
+  memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_shost, target_if->addr, ETHER_ADDR_LEN);
   ((sr_ethernet_hdr_t *)eth_packet)->ether_type = htons(ethertype_ip);
 
   /* Create IP packet */
