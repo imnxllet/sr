@@ -16,10 +16,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-
+#include "sr_if.h"
 #include "sr_rt.h"
 #include "sr_router.h"
-#include "sr_if.h"
 #include "sr_protocol.h"
 #include "sr_arpcache.h"
 #include "sr_utils.h"
@@ -160,7 +159,7 @@ int sr_handleIPpacket(struct sr_instance* sr,
     /* TO-DO: Essentially we need to check if this packet is ipv4*/
 
     /* See if this packet is for me or not. */
-    struct sr_if *target_if = (sr_if*) checkDestIsIface(ip_packet->ip_dst, sr);
+    struct sr_if *target_if = (struct sr_if*) checkDestIsIface(ip_packet->ip_dst, sr);
 
     /* This packet is for one of the interfaces */
     if(target_if != 0){
@@ -199,7 +198,7 @@ int sr_handleARPpacket(struct sr_instance* sr,
     sr_arp_hdr_t *arp_packet = (sr_arp_hdr_t *) packet + sizeof(sr_ethernet_hdr_t);
 
     /* Get the dest ip and see which interface it is.. */
-    sr_if *target_if = (sr_if*) checkDestIsIface(arp_packet->ar_tip, sr);
+    struct sr_if *target_if = (struct sr_if*) checkDestIsIface(arp_packet->ar_tip, sr);
 
     /* Error check */
     if(target_if == 0){
