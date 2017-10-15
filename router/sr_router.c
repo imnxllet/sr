@@ -165,7 +165,6 @@ int sr_handleIPpacket(struct sr_instance* sr,
 
     /* This packet is for one of the interfaces */
     if(target_if != 0){
-        printf("This is for me...\n");
         /* Check if it's ICMP or TCP/UDP */
         uint8_t ip_proto = ip_protocol((uint8_t *) ip_packet);
         if (ip_proto == ip_protocol_icmp) { /* ICMP, send echo reply */
@@ -184,7 +183,19 @@ int sr_handleIPpacket(struct sr_instance* sr,
     /* Packet should be forwarded. */
     }else{
 
-      return 0;
+      /* Check if Routing Table has entry for targeted ip addr */
+      /* use lpm */
+      struct sr_rt * matching_entry = longest_prefix_match(sr, ip_packet->ip_dst);
+
+      /* Found route*/
+      if(matching_entry){
+
+        return 0;
+
+      }else{/* No match */
+        printf("Did not find target ip in rtable..\n");
+        return sendICMPmessage(sr, 3, 0, interface, packet);
+      }
 
     }
     return 0;
@@ -340,17 +351,12 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
   /*ip_packet->ip_src = ori_ip_packet->ip_dst;*/
   struct sr_if *ethx = sr_get_interface(sr, iface);
   ip_packet->ip_src = ethx->ip;
-
-  
   
   ip_packet->ip_dst = ori_ip_packet->ip_src;
 
   /* Create ICMP Type 0 header*/
   ip_packet->ip_sum = 0;
   ip_packet->ip_sum = cksum(ip_packet, sizeof(sr_ip_hdr_t));
-
-
-  
 
   /* Take the original ip packet back */
   sr_icmp_t3_hdr_t *icmp_packet = (sr_icmp_t3_hdr_t *) (eth_packet + sizeof(sr_ethernet_hdr_t)+ sizeof(sr_ip_hdr_t));
@@ -362,10 +368,26 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
   icmp_packet->icmp_sum = cksum(icmp_packet, ntohs(ip_packet->ip_len) - (ip_packet->ip_hl * 4));
   
 
-
   printf("Eth pakcet prepared, ready to send...\n");
   print_hdrs(eth_packet, len);
   printf("--------------------------\n");
   return sr_send_packet(sr,eth_packet, /*uint8_t*/ /*unsigned int*/ len, iface);
 
+}
+
+
+struct sr_rt *longest_prefix_match(struct sr_instance* sr, uint32_t ip){
+
+    struct sr_rt *rtable = sr->routing_table;
+    while (rtable){
+        /* Check which entry has the same ip addr as given one */
+        if (((rtable->dest).s_addr & (rtable->mask).s_addr) == (ip & (route->mask).s_addr)){
+            /* Check if it's longer based on the mask */
+            return rtable;
+        }
+
+        rtable = rtable->next;
+    }
+
+    return 0;
 }
