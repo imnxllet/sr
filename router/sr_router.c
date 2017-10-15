@@ -224,9 +224,9 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
       /* Create Ethenet Packet */
       unsigned int len = (unsigned int) sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t);
       uint8_t *eth_packet = malloc(len);
-      memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_dhost, ori_packet->ether_shost, ETHER_ADDR_LEN);
-      memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_shost, ori_packet->ether_dhost, ETHER_ADDR_LEN);
-      eth_packet->ether_type = htons(ethertype_ip);
+      memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_dhost, ((sr_ethernet_hdr_t *)ori_packet)->ether_shost, ETHER_ADDR_LEN);
+      memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_shost, ((sr_ethernet_hdr_t *)ori_packet)->ether_dhost, ETHER_ADDR_LEN);
+      ((sr_ethernet_hdr_t *)eth_packet)->ether_type = htons(ethertype_ip);
 
       /* Create IP packet */
       sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) eth_packet + sizeof(sr_ethernet_hdr_t);
@@ -263,9 +263,9 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
   }else{/* Type 3 reply */
       unsigned int len = (unsigned int) sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t);
       uint8_t * eth_packet = malloc(len);
-      memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_dhost, ori_packet->ether_shost, ETHER_ADDR_LEN);
-      memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_shost, ori_packet->ether_dhost, ETHER_ADDR_LEN);
-      eth_packet->ether_type = htons(ethertype_ip);
+      memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_dhost, ((sr_ethernet_hdr_t *)ori_packet)->ether_shost, ETHER_ADDR_LEN);
+      memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_shost, ((sr_ethernet_hdr_t *)ori_packet)->ether_dhost, ETHER_ADDR_LEN);
+      ((sr_ethernet_hdr_t *)eth_packet)->ether_type = htons(ethertype_ip);
 
       /* Create IP packet */
       sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) eth_packet + sizeof(sr_ethernet_hdr_t);
