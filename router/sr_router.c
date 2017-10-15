@@ -90,7 +90,7 @@ void sr_handlepacket(struct sr_instance* sr,
     }
 
     /* Print ethenet packet header. */
-    print_hdrs(packet);
+    print_hdrs(packet, len);
 
     /* Create copy of packet */
     uint8_t *packet_copy =  (uint8_t *) malloc(sizeof(uint8_t) * len);
