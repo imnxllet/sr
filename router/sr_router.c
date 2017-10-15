@@ -159,10 +159,10 @@ int sr_handleIPpacket(struct sr_instance* sr,
     /* TO-DO: Essentially we need to check if this packet is ipv4*/
 
     /* See if this packet is for me or not. */
-    int isforme = checkDestIsIface(ip_packet->ip_dst, sr);
+    sr_if *target_if = checkDestIsIface(ip_packet->ip_dst, sr);
 
     /* This packet is for one of the interfaces */
-    if(isforme == 1){
+    if(target_if != 0){
         printf("This is for me...\n");
         /* Check if it's ICMP or TCP/UDP */
         uint8_t ip_proto = ip_protocol((uint8_t *) ip_packet);
@@ -188,7 +188,7 @@ int sr_handleIPpacket(struct sr_instance* sr,
     return 0;
 }
 
-/* Handle ARP Packet */
+/* Handle ARP Packet, Find MAC addr for a new IP addr*/
 int sr_handleARPpacket(struct sr_instance* sr,
         uint8_t * packet,
         unsigned int len,
@@ -197,12 +197,58 @@ int sr_handleARPpacket(struct sr_instance* sr,
     /* Process the ARP packet.. */
     sr_arp_hdr_t *arp_packet = (sr_arp_hdr_t *) packet + sizeof(sr_ethernet_hdr_t);
 
+    /* Get the dest ip and see which interface it is.. */
+    sr_if  *target_if = checkDestIsIface(arp_packet->ar_tip, sr);
+
+    /* Error check */
+    if(target_if == 0){
+      fprintf(stderr, "Some weird error.\n", );
+      return -1;
+    }
+    /* Check if this is reply or request */
+    if(arp_packet->ar_op == arp_op_request){/* Req. Construct reply with MAC addr*/
+        printf("This is an ARP request, preparing ARP reply...\n"); 
+        len = (unsigned int) sizeof(sr_ethernet_hdr_t) +  sizeof(sr_arp_hdr_t);
+  
+        uint8_t *eth_packet = malloc(len);
+        memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_dhost, ((sr_ethernet_hdr_t *)ori_packet)->ether_shost, ETHER_ADDR_LEN);
+        /* Source MAC is current Interface*/
+        memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_shost, target_if->addr, ETHER_ADDR_LEN);
+        ((sr_ethernet_hdr_t *)eth_packet)->ether_type = htons(ethertype_arp);
+
+        /* Create IP packet */
+        sr_arp_hdr_t *arp_reply = (sr_ip_hdr_t*) eth_packet + sizeof(sr_ethernet_hdr_t);
+
+        arp_reply->ar_hrd = htons(arp_hrd_ethernet);             /* format of hardware address   */
+        arp_reply->aar_pro = htons(0x0800);             /* format of protocol address   */
+        arp_reply->aar_hln = 6;             /* length of hardware address   */
+        arp_reply->aar_pln = 4;             /* length of protocol address   */
+        arp_reply->aar_op = htons(arp_op_reply);              /* ARP opcode (command)         */
+        memcpy(arp_reply->aar_sha, target_if->addr,ETHER_ADDR_LEN);/* sender hardware address      */
+        arp_reply->aar_sip = target_if->ip;             /* sender IP address            */
+        memcpy(arp_reply->aar_tha, arp_packet->aar_sha,ETHER_ADDR_LEN);/* target hardware address      */
+        arp_reply->aar_tip = arp_packet->ar_sip;
+
+        printf("Sending back ARP reply...Detail below:\n");  
+        print_hdrs(eth_packet, len);         
+        
+        return sr_send_packet(sr,eth_packet, /*uint8_t*/ /*unsigned int*/ len, iface);
+
+    }else if(arp_packet->ar_op == arp_op_reply){
+      printf("This is an ARP reply...\n"); 
+      return 0;
+
+    }else{
+      fprintf(stderr, "This ARP packet is of unknown type.\n");
+      return -1;
+    }
+
 
     return 0;
 }
 
 /* Check an IP addr is one of the interfaces' IP */
-int checkDestIsIface(uint32_t ip, struct sr_instance* sr){
+struct sr_if* checkDestIsIface(uint32_t ip, struct sr_instance* sr){
 
     printf("Checking if this is for me...\n");
     struct sr_if* if_walker = 0;
@@ -211,7 +257,7 @@ int checkDestIsIface(uint32_t ip, struct sr_instance* sr){
     while(if_walker)
     {
         if(ip == if_walker->ip){
-            return 1;
+            return if_walker;
         }
      
         if_walker = if_walker->next;
@@ -224,88 +270,51 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
   uint8_t icmp_code, char* iface, uint8_t * ori_packet){
 
   sr_ip_hdr_t *ori_ip_packet = (sr_ip_hdr_t*) ori_packet + sizeof(sr_ethernet_hdr_t);
+  unsigned int len = 0;
   if(icmp_type == 0){/* Echo reply */
-
       /* Create Ethenet Packet */
-      unsigned int len = (unsigned int) sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t);
-      uint8_t *eth_packet = malloc(len);
-      memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_dhost, ((sr_ethernet_hdr_t *)ori_packet)->ether_shost, ETHER_ADDR_LEN);
-      memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_shost, ((sr_ethernet_hdr_t *)ori_packet)->ether_dhost, ETHER_ADDR_LEN);
-      ((sr_ethernet_hdr_t *)eth_packet)->ether_type = htons(ethertype_ip);
-
-      /* Create IP packet */
-      sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) eth_packet + sizeof(sr_ethernet_hdr_t);
-      ip_packet->ip_hl = 5;
-      ip_packet->ip_v = 4;
-      ip_packet->ip_tos = 0;
-      ip_packet->ip_len = htons(len - sizeof(sr_ethernet_hdr_t));
-      ip_packet->ip_id = htons(1);
-      ip_packet->ip_off = htons(IP_DF);
-      ip_packet->ip_ttl = 64;
-      ip_packet->ip_p = ip_protocol_icmp;
-
-      /* Unknow for now?? lpm??*/
-      ip_packet->ip_src = ori_ip_packet->ip_dst;
-      
-      
-      ip_packet->ip_dst = ori_ip_packet->ip_src;
-
-      /* Create ICMP Type 0 header*/
-      sr_icmp_hdr_t *icmp_packet = (sr_icmp_hdr_t *) ip_packet + sizeof(sr_ip_hdr_t);
-      icmp_packet->icmp_type = icmp_type;
-      icmp_packet->icmp_code = icmp_code;
-
-      /* Doubt this ... */
-      icmp_packet->icmp_sum = cksum(icmp_packet, sizeof(sr_icmp_hdr_t));
-
-      ip_packet->ip_sum = cksum(icmp_packet, sizeof(sr_icmp_hdr_t));
-      return sr_send_packet(sr,eth_packet, /*uint8_t*/ /*unsigned int*/ len, iface);
-
-
-
-
-
+      len = (unsigned int) sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t);
   }else{/* Type 3 reply */
-      unsigned int len = (unsigned int) sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t);
-      uint8_t * eth_packet = malloc(len);
-      memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_dhost, ((sr_ethernet_hdr_t *)ori_packet)->ether_shost, ETHER_ADDR_LEN);
-      memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_shost, ((sr_ethernet_hdr_t *)ori_packet)->ether_dhost, ETHER_ADDR_LEN);
-      ((sr_ethernet_hdr_t *)eth_packet)->ether_type = htons(ethertype_ip);
-
-      /* Create IP packet */
-      sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) eth_packet + sizeof(sr_ethernet_hdr_t);
-      ip_packet->ip_hl = 5;
-      ip_packet->ip_v = 4;
-      ip_packet->ip_tos = 0;
-      ip_packet->ip_len = htons(len - sizeof(sr_ethernet_hdr_t));
-      ip_packet->ip_id = htons(1);
-      ip_packet->ip_off = htons(IP_DF);
-      ip_packet->ip_ttl = 64;
-      ip_packet->ip_p = ip_protocol_icmp;
-
-      /* Unknow for now?? lpm??*/
-      ip_packet->ip_src = ori_ip_packet->ip_dst;
-      
-      
-      ip_packet->ip_dst = ori_ip_packet->ip_src;
-
-      /* Create ICMP Type 0 header*/
-      sr_icmp_t3_hdr_t *icmp_packet = (sr_icmp_t3_hdr_t*) ip_packet + sizeof(sr_ip_hdr_t);
-      icmp_packet->icmp_type = icmp_type;
-      icmp_packet->icmp_code = icmp_code;
-
-      
-      /* Take the original ip packet back */
-      memcpy(icmp_packet->data, ori_ip_packet, ICMP_DATA_SIZE);
-      /* Doubt this ... */
-      icmp_packet->icmp_sum = cksum(icmp_packet, sizeof(sr_icmp_hdr_t));
-
-      ip_packet->ip_sum = cksum(icmp_packet, sizeof(sr_icmp_hdr_t));
-      return sr_send_packet(sr,eth_packet, /*uint8_t*/ /*unsigned int*/ len, iface);
+      len = (unsigned int) sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t3_t);
   }
+  uint8_t *eth_packet = malloc(len);
+  memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_dhost, ((sr_ethernet_hdr_t *)ori_packet)->ether_shost, ETHER_ADDR_LEN);
+  memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_shost, ((sr_ethernet_hdr_t *)ori_packet)->ether_dhost, ETHER_ADDR_LEN);
+  ((sr_ethernet_hdr_t *)eth_packet)->ether_type = htons(ethertype_ip);
 
-  return 0;
+  /* Create IP packet */
+  sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) eth_packet + sizeof(sr_ethernet_hdr_t);
+  ip_packet->ip_hl = 5;
+  ip_packet->ip_v = 4;
+  ip_packet->ip_tos = 0;
+  ip_packet->ip_len = htons(len - sizeof(sr_ethernet_hdr_t));
+  ip_packet->ip_id = htons(1);
+  ip_packet->ip_off = htons(IP_DF);
+  ip_packet->ip_ttl = 64;
+  ip_packet->ip_p = ip_protocol_icmp;
+
+  /* Unknow for now?? lpm??*/
+  ip_packet->ip_src = ori_ip_packet->ip_dst;
+  
+  
+  ip_packet->ip_dst = ori_ip_packet->ip_src;
+
+  /* Create ICMP Type 0 header*/
+  sr_icmp_hdr_t *icmp_packet = (sr_icmp_hdr_t *) ip_packet + sizeof(sr_ip_hdr_t);
+  icmp_packet->icmp_type = icmp_type;
+  icmp_packet->icmp_code = icmp_code;
 
   
+  if(icmp_type == 0){
+      /* Doubt this ... */
+      icmp_packet->icmp_sum = cksum(icmp_packet, sizeof(sr_icmp_hdr_t));
+  }else{
+      /* Take the original ip packet back */
+      memcpy(icmp_packet->data, ori_ip_packet, ICMP_DATA_SIZE);
+      icmp_packet->icmp_sum = cksum(icmp_packet, sizeof(sr_icmp_hdr_t3_t));
+  }
+
+  ip_packet->ip_sum = cksum(icmp_packet, sizeof(sr_icmp_hdr_t));
+  return sr_send_packet(sr,eth_packet, /*uint8_t*/ /*unsigned int*/ len, iface);
 
 }
