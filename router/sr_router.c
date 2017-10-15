@@ -79,6 +79,8 @@ void sr_handlepacket(struct sr_instance* sr,
 
     printf("*** -> Received packet of length %d \n",len);
 
+    printf("Through iface -> %s\n", interface);
+
     /* fill in code here */
   
 
