@@ -159,7 +159,7 @@ int sr_handleIPpacket(struct sr_instance* sr,
     /* TO-DO: Essentially we need to check if this packet is ipv4*/
 
     /* See if this packet is for me or not. */
-    sr_if *target_if = (sr_if*) checkDestIsIface(ip_packet->ip_dst, sr);
+    struct sr_if *target_if = (sr_if*) checkDestIsIface(ip_packet->ip_dst, sr);
 
     /* This packet is for one of the interfaces */
     if(target_if != 0){

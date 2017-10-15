@@ -31,9 +31,9 @@
 #define PACKET_DUMP_SIZE 1024
 #define MTU 1514
 
-/* forward declare */
+/* forward declare 
 struct sr_if;
-struct sr_rt;
+struct sr_rt;*/
 
 /* ----------------------------------------------------------------------------
  * struct sr_instance
