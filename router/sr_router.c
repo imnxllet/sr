@@ -376,7 +376,7 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
 }
 
 
-struct sr_rt *longest_prefix_match(struct sr_instance* sr, uint32_t ip){
+struct sr_rt* longest_prefix_match(struct sr_instance* sr, uint32_t ip){
 
     struct sr_rt *rtable = sr->routing_table;
     while (rtable){

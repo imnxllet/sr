@@ -73,7 +73,7 @@ int sr_handleARPpacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
 struct sr_if* checkDestIsIface(uint32_t ip, struct sr_instance* sr);
 int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type, uint8_t icmp_code, char* iface, uint8_t * ori_packet);
 int send_echo_reply(struct sr_instance* sr, char* iface, uint8_t * ori_packet, unsigned int len);
-struct sr_rt *longest_prefix_match(struct sr_instance* sr, uint32_t ip)
+struct sr_rt *longest_prefix_match(struct sr_instance* sr, uint32_t ip);
 
 /* -- sr_if.c -- */
 void sr_add_interface(struct sr_instance* , const char* );
