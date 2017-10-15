@@ -13,7 +13,7 @@
 
 #include <stdio.h>
 #include <assert.h>
-
+#include <stdlib.h>
 
 #include "sr_if.h"
 #include "sr_rt.h"
@@ -79,17 +79,7 @@ void sr_handlepacket(struct sr_instance* sr,
     printf("*** -> Received packet of length %d \n",len);
 
     /* fill in code here */
-    //int  sockfd;   /* socket to server */
-    //char user[32]; /* user name */
-    //char host[32]; /* host name */ 
-    //char template[30]; /* template name if any */
-    //unsigned short topo_id;
-    //struct sockaddr_in sr_addr; /* address to server */
-    //struct sr_if* if_list; /* list of interfaces */
-    // struct sr_rt* routing_table; /* routing table */
-    // struct sr_arpcache cache;   /* ARP cache */
-    // pthread_attr_t attr;
-    // FILE* logfile;
+  
 
     /* Sanity check
        can only check length of ethernet packet for now.*/
