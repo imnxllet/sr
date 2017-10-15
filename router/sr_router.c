@@ -217,7 +217,7 @@ int sr_handleARPpacket(struct sr_instance* sr,
         ((sr_ethernet_hdr_t *)eth_packet)->ether_type = htons(ethertype_arp);
 
         /* Create IP packet */
-        sr_arp_hdr_t *arp_reply = (sr_ip_hdr_t*) eth_packet + sizeof(sr_ethernet_hdr_t);
+        sr_arp_hdr_t *arp_reply = (sr_ip_hdr_t*) (eth_packet + sizeof(sr_ethernet_hdr_t));
 
         arp_reply->ar_hrd = htons(arp_hrd_ethernet);             /* format of hardware address   */
         arp_reply->ar_pro = htons(0x0800);             /* format of protocol address   */
@@ -232,7 +232,7 @@ int sr_handleARPpacket(struct sr_instance* sr,
         printf("Sending back ARP reply...Detail below:\n");  
         print_hdrs(eth_packet, len);         
         
-        return sr_send_packet(sr,eth_packet, /*uint8_t*/ /*unsigned int*/ len, iface);
+        return sr_send_packet(sr,eth_packet, /*uint8_t*/ /*unsigned int*/ len, interface);
 
     }else if(arp_packet->ar_op == arp_op_reply){
       printf("This is an ARP reply...\n"); 
@@ -275,7 +275,7 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
       /* Create Ethenet Packet */
       len = (unsigned int) sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t);
   }else{/* Type 3 reply */
-      len = (unsigned int) sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t3_t);
+      len = (unsigned int) sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t);
   }
   uint8_t *eth_packet = malloc(len);
   memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_dhost, ((sr_ethernet_hdr_t *)ori_packet)->ether_shost, ETHER_ADDR_LEN);
@@ -311,7 +311,7 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
   }else{
       /* Take the original ip packet back */
       memcpy(icmp_packet->data, ori_ip_packet, ICMP_DATA_SIZE);
-      icmp_packet->icmp_sum = cksum(icmp_packet, sizeof(sr_icmp_hdr_t3_t));
+      icmp_packet->icmp_sum = cksum(icmp_packet, sizeof(sr_icmp_t3_hdr_t));
   }
 
   ip_packet->ip_sum = cksum(icmp_packet, sizeof(sr_icmp_hdr_t));
