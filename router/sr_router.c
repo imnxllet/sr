@@ -381,7 +381,7 @@ struct sr_rt* longest_prefix_match(struct sr_instance* sr, uint32_t ip){
     struct sr_rt *rtable = sr->routing_table;
     while (rtable){
         /* Check which entry has the same ip addr as given one */
-        if (((rtable->dest).s_addr & (rtable->mask).s_addr) == (ip & (route->mask).s_addr)){
+        if (((rtable->dest).s_addr & (rtable->mask).s_addr) == (ip & (rtable->mask).s_addr)){
             /* Check if it's longer based on the mask */
             return rtable;
         }
