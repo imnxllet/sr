@@ -198,7 +198,7 @@ int sr_handleARPpacket(struct sr_instance* sr,
     sr_arp_hdr_t *arp_packet = (sr_arp_hdr_t *) packet + sizeof(sr_ethernet_hdr_t);
 
     /* Get the dest ip and see which interface it is.. */
-    sr_if  *target_if = (sr_if*) checkDestIsIface(arp_packet->ar_tip, sr);
+    sr_if *target_if = (sr_if*) checkDestIsIface(arp_packet->ar_tip, sr);
 
     /* Error check */
     if(target_if == 0){
@@ -226,7 +226,7 @@ int sr_handleARPpacket(struct sr_instance* sr,
         arp_reply->ar_op = htons(arp_op_reply);              /* ARP opcode (command)         */
         memcpy(arp_reply->ar_sha, target_if->addr,ETHER_ADDR_LEN);/* sender hardware address      */
         arp_reply->ar_sip = target_if->ip;             /* sender IP address            */
-        memcpy(arp_reply->ar_tha, arp_packet->aar_sha,ETHER_ADDR_LEN);/* target hardware address      */
+        memcpy(arp_reply->ar_tha, arp_packet->ar_sha,ETHER_ADDR_LEN);/* target hardware address      */
         arp_reply->ar_tip = arp_packet->ar_sip;
 
         printf("Sending back ARP reply...Detail below:\n");  
@@ -319,7 +319,7 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
       icmp_packet->icmp_code = icmp_code;
   }
 
-  ip_packet->ip_sum = cksum(icmp_packet, sizeof(sr_icmp_hdr_t));
+  ip_packet->ip_sum = cksum(ip_packet, sizeof(sr_ip_hdr_t));
   return sr_send_packet(sr,eth_packet, /*uint8_t*/ /*unsigned int*/ len, iface);
 
 }
