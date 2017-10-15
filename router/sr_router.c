@@ -308,7 +308,8 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
   ip_packet->ip_dst = ori_ip_packet->ip_src;
 
   /* Create ICMP Type 0 header*/
-  
+  ip_packet->ip_sum = 0;
+  ip_packet->ip_sum = cksum(ip_packet, sizeof(sr_ip_hdr_t));
 
 
   
@@ -330,8 +331,7 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
       icmp_packet->icmp_sum = cksum(icmp_packet, sizeof(sr_icmp_t3_hdr_t));
   }
 
-  ip_packet->ip_sum = 0;
-  ip_packet->ip_sum = cksum(ip_packet, sizeof(sr_ip_hdr_t));
+  
   printf("Eth pakcet prepared, ready to send...\n");
   print_hdrs(eth_packet, len);
   printf("--------------------------\n");
