@@ -29,6 +29,7 @@
 
 #define INIT_TTL 255
 #define PACKET_DUMP_SIZE 1024
+#define MTU 1514
 
 /* forward declare */
 struct sr_if;
