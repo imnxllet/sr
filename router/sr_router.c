@@ -119,6 +119,7 @@ void sr_handlepacket(struct sr_instance* sr,
         }
 
         /*sr_ip_hdr *ip_packet = (sr_ip_hdr *) packet_copy + sizeof(sr_ethernet_hdr_t);*/
+        printf("This is a IP packet...\n");
         int handle_signal = sr_handleIPpacket(sr, packet_copy, len, iface); 
         return;
 
@@ -132,6 +133,7 @@ void sr_handlepacket(struct sr_instance* sr,
             return;
         }
         /*sr_arp_hdr_t *arp_packet = (sr_arp_hdr_t *) packet_copy + sizeof(sr_ethernet_hdr_t);*/
+        printf("This is a ARP packet...\n");
         int handle_signal = sr_handleARPpacket(sr, packet_copy, len, iface);
         return; 
 
@@ -151,6 +153,7 @@ int sr_handleIPpacket(struct sr_instance* sr,
         char* interface){
 
     /* Process the IP packet.. */
+    print_hdr_ip((uint8_t *) (packet + sizeof(sr_ethernet_hdr_t)));
     sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) packet + sizeof(sr_ethernet_hdr_t);
 
     /* TO-DO: Essentially we need to check if this packet is ipv4*/
@@ -160,7 +163,7 @@ int sr_handleIPpacket(struct sr_instance* sr,
 
     /* This packet is for one of the interfaces */
     if(isforme == 1){
-
+        printf("This is for me...\n");
         /* Check if it's ICMP or TCP/UDP */
         uint8_t ip_proto = ip_protocol((uint8_t *) ip_packet);
         if (ip_proto == ip_protocol_icmp) { /* ICMP, send echo reply */
@@ -200,6 +203,8 @@ int sr_handleARPpacket(struct sr_instance* sr,
 
 /* Check an IP addr is one of the interfaces' IP */
 int checkDestIsIface(uint32_t ip, struct sr_instance* sr){
+
+    printf("Checking if this is for me...\n");
     struct sr_if* if_walker = 0;
     if_walker = sr->if_list;
 
