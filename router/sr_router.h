@@ -68,6 +68,10 @@ int sr_read_from_server(struct sr_instance* );
 /* -- sr_router.c -- */
 void sr_init(struct sr_instance* );
 void sr_handlepacket(struct sr_instance* , uint8_t * , unsigned int , char* );
+int sr_handleIPpacket(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface);
+int sr_handleARPpacket(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface);
+int checkDestIsIface(uint32_t ip, struct sr_instance* sr);
+int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type, uint8_t icmp_code, char* iface, uint8_t * ori_packet);
 
 /* -- sr_if.c -- */
 void sr_add_interface(struct sr_instance* , const char* );

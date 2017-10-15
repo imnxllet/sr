@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "sr_if.h"
 #include "sr_rt.h"
@@ -100,10 +101,10 @@ void sr_handlepacket(struct sr_instance* sr,
     
     /* Save destination and source MAC address */
     /* Might not need this... */
-    //uint8_t *dest_mac =  (uint8_t *) malloc(sizeof(uint8_t) * ETHER_ADDR_LEN);
-    //memcpy(dest_mac, packet_copy->ether_dhost, ETHER_ADDR_LEN);
-    //uint8_t *src_mac =  (uint8_t *) malloc(sizeof(uint8_t) * ETHER_ADDR_LEN);
-    //memcpy(src_mac, packet_copy->ether_shost, ETHER_ADDR_LEN);
+    /*uint8_t *dest_mac =  (uint8_t *) malloc(sizeof(uint8_t) * ETHER_ADDR_LEN);*/
+    /*memcpy(dest_mac, packet_copy->ether_dhost, ETHER_ADDR_LEN);*/
+    /*uint8_t *src_mac =  (uint8_t *) malloc(sizeof(uint8_t) * ETHER_ADDR_LEN);*/
+    /*memcpy(src_mac, packet_copy->ether_shost, ETHER_ADDR_LEN);*/
 
 
     /* Check packet type */
@@ -112,25 +113,27 @@ void sr_handlepacket(struct sr_instance* sr,
     /* IP Packet */
     if (ethtype == ethertype_ip) {
         minlength += sizeof(sr_ip_hdr_t);
-        if (length < minlength) {
+        if (len < minlength) {
           fprintf(stderr, "Failed to process IP packet, insufficient length\n");
           return;
         }
 
-        //sr_ip_hdr *ip_packet = (sr_ip_hdr *) packet_copy + sizeof(sr_ethernet_hdr_t);
-        sr_handleIPpacket(sr, packet_copy, len, iface); 
+        /*sr_ip_hdr *ip_packet = (sr_ip_hdr *) packet_copy + sizeof(sr_ethernet_hdr_t);*/
+        int handle_signal = sr_handleIPpacket(sr, packet_copy, len, iface); 
+        return;
 
 
 
     /* ARP Packet*/
     }else if (ethtype == ethertype_arp) {
         minlength += sizeof(sr_arp_hdr_t);
-        if (length < minlength){
+        if (len < minlength){
             fprintf(stderr, "Failed to process ARP packet, insufficient length\n");
             return;
         }
-        //sr_arp_hdr_t *arp_packet = (sr_arp_hdr_t *) packet_copy + sizeof(sr_ethernet_hdr_t);
-        sr_handleARPpacket(sr, packet_copy, len, iface) 
+        /*sr_arp_hdr_t *arp_packet = (sr_arp_hdr_t *) packet_copy + sizeof(sr_ethernet_hdr_t);*/
+        int handle_signal = sr_handleARPpacket(sr, packet_copy, len, iface);
+        return; 
 
     
 
@@ -148,7 +151,7 @@ int sr_handleIPpacket(struct sr_instance* sr,
         char* interface){
 
     /* Process the IP packet.. */
-    sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) packet_copy + sizeof(sr_ethernet_hdr_t);
+    sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) packet + sizeof(sr_ethernet_hdr_t);
 
     /* TO-DO: Essentially we need to check if this packet is ipv4*/
 
@@ -159,7 +162,7 @@ int sr_handleIPpacket(struct sr_instance* sr,
     if(isforme == 1){
 
         /* Check if it's ICMP or TCP/UDP */
-        uint8_t ip_proto = ip_protocol(ip_packet);
+        uint8_t ip_proto = ip_protocol((uint8_t *) ip_packet);
         if (ip_proto == ip_protocol_icmp) { /* ICMP, send echo reply */
           printf("This packet is for me(Echo Req), send echo reply back...\n");
           return sendICMPmessage(sr, 0, 0, interface, packet);
@@ -176,8 +179,10 @@ int sr_handleIPpacket(struct sr_instance* sr,
     /* Packet should be forwarded. */
     }else{
 
-    }
+      return 0;
 
+    }
+    return 0;
 }
 
 /* Handle ARP Packet */
@@ -187,7 +192,10 @@ int sr_handleARPpacket(struct sr_instance* sr,
         char* interface){
 
     /* Process the ARP packet.. */
-    sr_arp_hdr_t *arp_packet = (sr_arp_hdr_t *) packet_copy + sizeof(sr_ethernet_hdr_t);
+    sr_arp_hdr_t *arp_packet = (sr_arp_hdr_t *) packet + sizeof(sr_ethernet_hdr_t);
+
+
+    return 0;
 }
 
 /* Check an IP addr is one of the interfaces' IP */
@@ -214,15 +222,15 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
   if(icmp_type == 0){/* Echo reply */
 
       /* Create Ethenet Packet */
-      unsigned int len = (unsigned int) sizeof(sr_ethernet_hdr) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t);
+      unsigned int len = (unsigned int) sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t);
       uint8_t *eth_packet = malloc(len);
-      memcpy(eth_packet->dther_dhost, ori_packet->ether_shost, ETHER_ADDR_LEN);
-      memcpy(eth_packet->ether_shost, ori_packet->dther_shost, ETHER_ADDR_LEN);
+      memcpy(eth_packet->ether_dhost, ori_packet->ether_shost, ETHER_ADDR_LEN);
+      memcpy(eth_packet->ether_shost, ori_packet->ether_dhost, ETHER_ADDR_LEN);
       eth_packet->ether_type = htons(ethertype_ip);
 
       /* Create IP packet */
       sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) eth_packet + sizeof(sr_ethernet_hdr_t);
-      ipHdr->ip_hl = 5;
+      ip_packet->ip_hl = 5;
       ip_packet->ip_v = 4;
       ip_packet->ip_tos = 0;
       ip_packet->ip_len = htons(icmpPacketLen - sizeof(sr_ethernet_hdr_t));
@@ -253,15 +261,15 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
 
 
   }else{/* Type 3 reply */
-      unsigned int len = (unsigned int) sizeof(sr_ethernet_hdr) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t);
+      unsigned int len = (unsigned int) sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t);
       uint8_t * eth_packet = malloc(len);
-      memcpy(eth_packet->dther_dhost, ori_packet->ether_shost, ETHER_ADDR_LEN);
-      memcpy(eth_packet->ether_shost, ori_packet->dther_shost, ETHER_ADDR_LEN);
+      memcpy(eth_packet->ether_dhost, ori_packet->ether_shost, ETHER_ADDR_LEN);
+      memcpy(eth_packet->ether_shost, ori_packet->ether_dhost, ETHER_ADDR_LEN);
       eth_packet->ether_type = htons(ethertype_ip);
 
       /* Create IP packet */
       sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) eth_packet + sizeof(sr_ethernet_hdr_t);
-      ipHdr->ip_hl = 5;
+      ip_packet>ip_hl = 5;
       ip_packet->ip_v = 4;
       ip_packet->ip_tos = 0;
       ip_packet->ip_len = htons(icmpPacketLen - sizeof(sr_ethernet_hdr_t));
@@ -290,6 +298,8 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
       ip_packet->ip_sum = cksum(icmp_packet, sizeof(sr_icmp_hdr_t));
       return sr_send_packet(sr,eth_packet, /*uint8_t*/ /*unsigned int*/ len, iface);
   }
+
+  return 0;
 
   
 
