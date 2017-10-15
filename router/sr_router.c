@@ -273,7 +273,7 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
       ip_packet->ip_v = 4;
       ip_packet->ip_tos = 0;
       ip_packet->ip_len = htons(len - sizeof(sr_ethernet_hdr_t));
-      ip_packet>ip_id = htons(1);
+      ip_packet->ip_id = htons(1);
       ip_packet->ip_off = htons(IP_DF);
       ip_packet->ip_ttl = 64;
       ip_packet->ip_p = ip_protocol_icmp;
