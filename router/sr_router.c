@@ -195,7 +195,7 @@ int sr_handleARPpacket(struct sr_instance* sr,
         char* interface){
 
     /* Process the ARP packet.. */
-    sr_arp_hdr_t *arp_packet = (sr_arp_hdr_t *) packet + sizeof(sr_ethernet_hdr_t);
+    sr_arp_hdr_t *arp_packet = (sr_arp_hdr_t *) (packet + sizeof(sr_ethernet_hdr_t));
 
     /* Get the dest ip and see which interface it is.. */
     struct sr_if *target_if = (struct sr_if*) checkDestIsIface(arp_packet->ar_tip, sr);
