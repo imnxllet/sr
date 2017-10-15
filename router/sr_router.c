@@ -154,7 +154,7 @@ int sr_handleIPpacket(struct sr_instance* sr,
 
     /* Process the IP packet.. */
     print_hdr_ip((uint8_t *) (packet + sizeof(sr_ethernet_hdr_t)));
-    sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) packet + sizeof(sr_ethernet_hdr_t);
+    sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) (packet + sizeof(sr_ethernet_hdr_t));
 
     /* TO-DO: Essentially we need to check if this packet is ipv4*/
 
