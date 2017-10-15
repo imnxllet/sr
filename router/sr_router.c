@@ -159,7 +159,7 @@ int sr_handleIPpacket(struct sr_instance* sr,
     /* TO-DO: Essentially we need to check if this packet is ipv4*/
 
     /* See if this packet is for me or not. */
-    sr_if *target_if = checkDestIsIface(ip_packet->ip_dst, sr);
+    sr_if *target_if = (sr_if*) checkDestIsIface(ip_packet->ip_dst, sr);
 
     /* This packet is for one of the interfaces */
     if(target_if != 0){
@@ -198,11 +198,11 @@ int sr_handleARPpacket(struct sr_instance* sr,
     sr_arp_hdr_t *arp_packet = (sr_arp_hdr_t *) packet + sizeof(sr_ethernet_hdr_t);
 
     /* Get the dest ip and see which interface it is.. */
-    sr_if  *target_if = checkDestIsIface(arp_packet->ar_tip, sr);
+    sr_if  *target_if = (sr_if*) checkDestIsIface(arp_packet->ar_tip, sr);
 
     /* Error check */
     if(target_if == 0){
-      fprintf(stderr, "Some weird error.\n", );
+      fprintf(stderr, "Some weird error.\n");
       return -1;
     }
     /* Check if this is reply or request */
@@ -211,7 +211,7 @@ int sr_handleARPpacket(struct sr_instance* sr,
         len = (unsigned int) sizeof(sr_ethernet_hdr_t) +  sizeof(sr_arp_hdr_t);
   
         uint8_t *eth_packet = malloc(len);
-        memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_dhost, ((sr_ethernet_hdr_t *)ori_packet)->ether_shost, ETHER_ADDR_LEN);
+        memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_dhost, ((sr_ethernet_hdr_t *)packet)->ether_shost, ETHER_ADDR_LEN);
         /* Source MAC is current Interface*/
         memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_shost, target_if->addr, ETHER_ADDR_LEN);
         ((sr_ethernet_hdr_t *)eth_packet)->ether_type = htons(ethertype_arp);
@@ -220,14 +220,14 @@ int sr_handleARPpacket(struct sr_instance* sr,
         sr_arp_hdr_t *arp_reply = (sr_ip_hdr_t*) eth_packet + sizeof(sr_ethernet_hdr_t);
 
         arp_reply->ar_hrd = htons(arp_hrd_ethernet);             /* format of hardware address   */
-        arp_reply->aar_pro = htons(0x0800);             /* format of protocol address   */
-        arp_reply->aar_hln = 6;             /* length of hardware address   */
-        arp_reply->aar_pln = 4;             /* length of protocol address   */
-        arp_reply->aar_op = htons(arp_op_reply);              /* ARP opcode (command)         */
-        memcpy(arp_reply->aar_sha, target_if->addr,ETHER_ADDR_LEN);/* sender hardware address      */
-        arp_reply->aar_sip = target_if->ip;             /* sender IP address            */
-        memcpy(arp_reply->aar_tha, arp_packet->aar_sha,ETHER_ADDR_LEN);/* target hardware address      */
-        arp_reply->aar_tip = arp_packet->ar_sip;
+        arp_reply->ar_pro = htons(0x0800);             /* format of protocol address   */
+        arp_reply->ar_hln = 6;             /* length of hardware address   */
+        arp_reply->ar_pln = 4;             /* length of protocol address   */
+        arp_reply->ar_op = htons(arp_op_reply);              /* ARP opcode (command)         */
+        memcpy(arp_reply->ar_sha, target_if->addr,ETHER_ADDR_LEN);/* sender hardware address      */
+        arp_reply->ar_sip = target_if->ip;             /* sender IP address            */
+        memcpy(arp_reply->ar_tha, arp_packet->aar_sha,ETHER_ADDR_LEN);/* target hardware address      */
+        arp_reply->ar_tip = arp_packet->ar_sip;
 
         printf("Sending back ARP reply...Detail below:\n");  
         print_hdrs(eth_packet, len);         
