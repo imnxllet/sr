@@ -303,11 +303,9 @@ int send_echo_reply(struct sr_instance* sr,char* iface, uint8_t * ori_packet, un
 
   return sr_send_packet(sr,ori_packet, /*uint8_t*/ /*unsigned int*/ len, iface);
 
-
-
-
-
 }
+
+
 int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type, 
   uint8_t icmp_code, char* iface, uint8_t * ori_packet){
 
