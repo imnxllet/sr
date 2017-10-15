@@ -273,12 +273,16 @@ struct sr_if* checkDestIsIface(uint32_t ip, struct sr_instance* sr){
 int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type, 
   uint8_t icmp_code, char* iface, uint8_t * ori_packet){
 
-  sr_ip_hdr_t *ori_ip_packet = (sr_ip_hdr_t*) ori_packet + sizeof(sr_ethernet_hdr_t);
+  printf("Creating ICMP message..\n");
+
+  sr_ip_hdr_t *ori_ip_packet = (sr_ip_hdr_t*) (ori_packet + sizeof(sr_ethernet_hdr_t));
   unsigned int len = 0;
   if(icmp_type == 0){/* Echo reply */
       /* Create Ethenet Packet */
+      printf("Creating echo reply..\n");
       len = (unsigned int) sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t);
   }else{/* Type 3 reply */
+      printf("Creating unreachable reply..\n");
       len = (unsigned int) sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t);
   }
   uint8_t *eth_packet = malloc(len);
@@ -287,7 +291,7 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
   ((sr_ethernet_hdr_t *)eth_packet)->ether_type = htons(ethertype_ip);
 
   /* Create IP packet */
-  sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) eth_packet + sizeof(sr_ethernet_hdr_t);
+  sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) (eth_packet + sizeof(sr_ethernet_hdr_t));
   ip_packet->ip_hl = 5;
   ip_packet->ip_v = 4;
   ip_packet->ip_tos = 0;
@@ -310,13 +314,13 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
   
   if(icmp_type == 0){
       /* Doubt this ... */
-      sr_icmp_hdr_t *icmp_packet = (sr_icmp_hdr_t *) ip_packet + sizeof(sr_ip_hdr_t);
+      sr_icmp_hdr_t *icmp_packet = (sr_icmp_hdr_t *) (ip_packet + sizeof(sr_ip_hdr_t));
       icmp_packet->icmp_type = icmp_type;
       icmp_packet->icmp_code = icmp_code;
       icmp_packet->icmp_sum = cksum(icmp_packet, sizeof(sr_icmp_hdr_t));
   }else{
       /* Take the original ip packet back */
-      sr_icmp_t3_hdr_t *icmp_packet = (sr_icmp_hdr_t *) ip_packet + sizeof(sr_ip_hdr_t);
+      sr_icmp_t3_hdr_t *icmp_packet = (sr_icmp_hdr_t *) (ip_packet + sizeof(sr_ip_hdr_t));
       memcpy(icmp_packet->data, ori_ip_packet, ICMP_DATA_SIZE);
       icmp_packet->icmp_sum = cksum(icmp_packet, sizeof(sr_icmp_t3_hdr_t));
       icmp_packet->icmp_type = icmp_type;
@@ -324,6 +328,9 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
   }
 
   ip_packet->ip_sum = cksum(ip_packet, sizeof(sr_ip_hdr_t));
+  printf("Eth pakcet prepared, ready to send...\n");
+  print_hdrs(eth_packet, len);
+  printf("--------------------------\n");
   return sr_send_packet(sr,eth_packet, /*uint8_t*/ /*unsigned int*/ len, iface);
 
 }
