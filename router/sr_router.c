@@ -337,7 +337,10 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
   ip_packet->ip_p = ip_protocol_icmp;
 
   /* Unknow for now?? lpm??*/
-  ip_packet->ip_src = ori_ip_packet->ip_dst;
+  /*ip_packet->ip_src = ori_ip_packet->ip_dst;*/
+  struct sr_if *ethx = sr_get_interface(sr, iface);
+  ip_packet->ip_src = ethx->ip;
+
   
   
   ip_packet->ip_dst = ori_ip_packet->ip_src;
