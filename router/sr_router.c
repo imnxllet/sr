@@ -68,7 +68,7 @@ void sr_init(struct sr_instance* sr)
  *---------------------------------------------------------------------*/
 
 void sr_handlepacket(struct sr_instance* sr,
-        uint8_t * packet_copy/* lent */,
+        uint8_t * packet/* lent */,
         unsigned int len,
         char* interface/* lent */)
 {
@@ -108,7 +108,7 @@ void sr_handlepacket(struct sr_instance* sr,
 
 
     /* Check packet type */
-    uint16_t ethtype = ethertype(packet_copy);
+    uint16_t ethtype = ethertype(packet);
 
     /* IP Packet */
     if (ethtype == ethertype_ip) {
@@ -120,7 +120,7 @@ void sr_handlepacket(struct sr_instance* sr,
 
         /*sr_ip_hdr *ip_packet = (sr_ip_hdr *) packet_copy + sizeof(sr_ethernet_hdr_t);*/
         printf("This is a IP packet...\n");
-        int handle_signal = sr_handleIPpacket(sr, packet_copy, len, iface); 
+        int handle_signal = sr_handleIPpacket(sr, packet, len, iface); 
         return;
 
 
@@ -134,7 +134,7 @@ void sr_handlepacket(struct sr_instance* sr,
         }
         /*sr_arp_hdr_t *arp_packet = (sr_arp_hdr_t *) packet_copy + sizeof(sr_ethernet_hdr_t);*/
         printf("This is a ARP packet...\n");
-        int handle_signal = sr_handleARPpacket(sr, packet_copy, len, iface);
+        int handle_signal = sr_handleARPpacket(sr, packet, len, iface);
         return; 
 
     
@@ -276,8 +276,8 @@ int send_echo_reply(struct sr_instance* sr,char* iface, uint8_t * ori_packet, un
 
   uint8_t *temp_dhost = malloc(sizeof(uint8_t) * ETHER_ADDR_LEN);
   memcpy(temp_dhost, ((sr_ethernet_hdr_t *)ori_packet)->ether_dhost, ETHER_ADDR_LEN);
-  memcpy(((sr_ethernet_hdr_t *)ori_packet)->ether_dhost, ((sr_ethernet_hdr_t *)eth_packet)->ether_shost, ETHER_ADDR_LEN);
-  memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_shost, temp_dhost, ETHER_ADDR_LEN);
+  memcpy(((sr_ethernet_hdr_t *)ori_packet)->ether_dhost, ((sr_ethernet_hdr_t *)ori_packet)->ether_shost, ETHER_ADDR_LEN);
+  memcpy(((sr_ethernet_hdr_t *)ori_packet)->ether_shost, temp_dhost, ETHER_ADDR_LEN);
   free(temp_dhost);
 
   sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) (ori_packet + sizeof(sr_ethernet_hdr_t));
@@ -288,7 +288,7 @@ int send_echo_reply(struct sr_instance* sr,char* iface, uint8_t * ori_packet, un
   ip_packet->ip_src = ip_packet->ip_dst;
   ip_packet->ip_dst = temp_ip_src;
   ip_packet->ip_sum = 0;
-  ip_packet->ip_sum = cksum((uint8_t *) ip_packet, sizeof(sr_ip_hdr));
+  ip_packet->ip_sum = cksum((uint8_t *) ip_packet, sizeof(sr_ip_hdr_t));
 
   sr_icmp_hdr_t *icmp_packet = (sr_icmp_hdr_t *) (ip_packet + sizeof(sr_ip_hdr_t));
   icmp_packet->icmp_type = 0;
