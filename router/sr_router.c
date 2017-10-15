@@ -155,7 +155,7 @@ int sr_handleIPpacket(struct sr_instance* sr,
         char* interface){
 
     /* Process the IP packet.. */
-    print_hdr_ip((uint8_t *) (packet + sizeof(sr_ethernet_hdr_t)));
+    /*print_hdr_ip((uint8_t *) (packet + sizeof(sr_ethernet_hdr_t)));*/
     sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) (packet + sizeof(sr_ethernet_hdr_t));
 
     /* TO-DO: Essentially we need to check if this packet is ipv4*/
@@ -300,7 +300,8 @@ int send_echo_reply(struct sr_instance* sr,char* iface, uint8_t * ori_packet, un
   /*copy...*/
   icmp_packet->icmp_sum = cksum(icmp_packet, ntohs(ip_packet->ip_len) - (ip_packet->ip_hl * 4));
 
-
+  printf("Echo reply as folllow: \n");
+  print_hdrs(ori_packet, len);
 
 
   return sr_send_packet(sr,ori_packet, /*uint8_t*/ /*unsigned int*/ len, iface);
