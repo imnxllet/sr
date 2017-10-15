@@ -68,7 +68,7 @@ void sr_init(struct sr_instance* sr)
  *---------------------------------------------------------------------*/
 
 void sr_handlepacket(struct sr_instance* sr,
-        uint8_t * packet/* lent */,
+        uint8_t * packet_copy/* lent */,
         unsigned int len,
         char* interface/* lent */)
 {
@@ -93,8 +93,8 @@ void sr_handlepacket(struct sr_instance* sr,
     print_hdrs(packet, len);
 
     /* Create copy of packet */
-    uint8_t *packet_copy =  (uint8_t *) malloc(sizeof(uint8_t) * len);
-    memcpy(packet_copy, packet,len);
+    /*uint8_t *packet_copy =  (uint8_t *) malloc(sizeof(uint8_t) * len);
+    memcpy(packet_copy, packet,len);*/
 
     char *iface = (char *) malloc(sizeof(char) * (strlen(interface) + 1));
     memcpy(iface, interface, strlen(interface) + 1);
@@ -168,7 +168,7 @@ int sr_handleIPpacket(struct sr_instance* sr,
         uint8_t ip_proto = ip_protocol((uint8_t *) ip_packet);
         if (ip_proto == ip_protocol_icmp) { /* ICMP, send echo reply */
           printf("This packet is for me(Echo Req), send echo reply back...\n");
-          return sendICMPmessage(sr, 0, 0, interface, packet);
+          return send_echo_reply(sr, interface, packet, len);
 
 
         }else if(ip_proto == 0x0006 || ip_proto == 0x11){ /* TCP/UDP, Send ICMP Port Unreachable */
@@ -270,6 +270,44 @@ struct sr_if* checkDestIsIface(uint32_t ip, struct sr_instance* sr){
     return 0;
 }
 
+
+/* Send original packet back */
+int send_echo_reply(struct sr_instance* sr,char* iface, uint8_t * ori_packet, unsigned int len){
+
+  uint8_t *temp_dhost = malloc(sizeof(uint8_t) * ETHER_ADDR_LEN);
+  memcpy(temp_dhost, ((sr_ethernet_hdr_t *)ori_packet)->ether_dhost, ETHER_ADDR_LEN);
+  memcpy(((sr_ethernet_hdr_t *)ori_packet)->ether_dhost, ((sr_ethernet_hdr_t *)eth_packet)->ether_shost, ETHER_ADDR_LEN);
+  memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_shost, temp_dhost, ETHER_ADDR_LEN);
+  free(temp_dhost);
+
+  sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) (ori_packet + sizeof(sr_ethernet_hdr_t));
+
+  /* Modify IP addr */
+
+  uint32_t temp_ip_src = ip_packet->ip_src;
+  ip_packet->ip_src = ip_packet->ip_dst;
+  ip_packet->ip_dst = temp_ip_src;
+  ip_packet->ip_sum = 0;
+  ip_packet->ip_sum = cksum((uint8_t *) ip_packet, sizeof(sr_ip_hdr));
+
+  sr_icmp_hdr_t *icmp_packet = (sr_icmp_hdr_t *) (ip_packet + sizeof(sr_ip_hdr_t));
+  icmp_packet->icmp_type = 0;
+  icmp_packet->icmp_code = 0;
+  icmp_packet->icmp_sum = 0;
+  /*icmp_packet->icmp_sum = cksum(icmp_packet, sizeof(sr_icmp_hdr_t));*/
+  /*copy...*/
+  icmp_packet->icmp_sum = cksum(icmp_packet, ntohs(ip_packet->ip_len) - (ip_packet->ip_hl * 4));
+
+
+
+
+  return sr_send_packet(sr,ori_packet, /*uint8_t*/ /*unsigned int*/ len, iface);
+
+
+
+
+
+}
 int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type, 
   uint8_t icmp_code, char* iface, uint8_t * ori_packet){
 
