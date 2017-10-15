@@ -206,7 +206,7 @@ int sr_handleARPpacket(struct sr_instance* sr,
       return -1;
     }
     /* Check if this is reply or request */
-    if(arp_packet->ar_op == arp_op_request){/* Req. Construct reply with MAC addr*/
+    if(arp_packet->ar_op == htons(arp_op_request)){/* Req. Construct reply with MAC addr*/
         printf("This is an ARP request, preparing ARP reply...\n"); 
         len = (unsigned int) sizeof(sr_ethernet_hdr_t) +  sizeof(sr_arp_hdr_t);
   
@@ -234,7 +234,7 @@ int sr_handleARPpacket(struct sr_instance* sr,
         
         return sr_send_packet(sr,eth_packet, /*uint8_t*/ /*unsigned int*/ len, interface);
 
-    }else if(arp_packet->ar_op == arp_op_reply){
+    }else if(arp_packet->ar_op == htons(arp_op_reply)){
       printf("This is an ARP reply...\n"); 
       return 0;
 
