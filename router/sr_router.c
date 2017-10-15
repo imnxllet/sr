@@ -300,18 +300,23 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
   ip_packet->ip_dst = ori_ip_packet->ip_src;
 
   /* Create ICMP Type 0 header*/
-  sr_icmp_hdr_t *icmp_packet = (sr_icmp_hdr_t *) ip_packet + sizeof(sr_ip_hdr_t);
-  icmp_packet->icmp_type = icmp_type;
-  icmp_packet->icmp_code = icmp_code;
+  
+
 
   
   if(icmp_type == 0){
       /* Doubt this ... */
+      sr_icmp_hdr_t *icmp_packet = (sr_icmp_hdr_t *) ip_packet + sizeof(sr_ip_hdr_t);
+      icmp_packet->icmp_type = icmp_type;
+      icmp_packet->icmp_code = icmp_code;
       icmp_packet->icmp_sum = cksum(icmp_packet, sizeof(sr_icmp_hdr_t));
   }else{
       /* Take the original ip packet back */
+      sr_icmp_t3_hdr_t *icmp_packet = (sr_icmp_hdr_t *) ip_packet + sizeof(sr_ip_hdr_t);
       memcpy(icmp_packet->data, ori_ip_packet, ICMP_DATA_SIZE);
       icmp_packet->icmp_sum = cksum(icmp_packet, sizeof(sr_icmp_t3_hdr_t));
+      icmp_packet->icmp_type = icmp_type;
+      icmp_packet->icmp_code = icmp_code;
   }
 
   ip_packet->ip_sum = cksum(icmp_packet, sizeof(sr_icmp_hdr_t));
