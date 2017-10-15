@@ -316,14 +316,10 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
 
   sr_ip_hdr_t *ori_ip_packet = (sr_ip_hdr_t*) (ori_packet + sizeof(sr_ethernet_hdr_t));
   unsigned int len = 0;
-  if(icmp_type == 0){/* Echo reply */
-      /* Create Ethenet Packet */
-      printf("Creating echo reply..\n");
-      len = (unsigned int) sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t);
-  }else{/* Type 3 reply */
-      printf("Creating unreachable reply..\n");
-      len = (unsigned int) sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t);
-  }
+
+  printf("Creating unreachable reply..\n");
+  len = (unsigned int) sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t);
+  
   uint8_t *eth_packet = malloc(len);
   memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_dhost, ((sr_ethernet_hdr_t *)ori_packet)->ether_shost, ETHER_ADDR_LEN);
   memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_shost, ((sr_ethernet_hdr_t *)ori_packet)->ether_dhost, ETHER_ADDR_LEN);
@@ -352,26 +348,16 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
 
 
   
-  if(icmp_type == 0){
-      /* Doubt this ... */
-      sr_icmp_hdr_t *icmp_packet = (sr_icmp_hdr_t *) (ip_packet + sizeof(sr_ip_hdr_t));
-      icmp_packet->icmp_type = icmp_type;
-      icmp_packet->icmp_code = icmp_code;
-      icmp_packet->icmp_sum = 0;
-      /*icmp_packet->icmp_sum = cksum(icmp_packet, sizeof(sr_icmp_hdr_t));*/
-      /*copy...*/
-      icmp_packet->icmp_sum = cksum(icmp_packet, ntohs(ip_packet->ip_len) - (ip_packet->ip_hl * 4));
-      
-  }else{
-      /* Take the original ip packet back */
-      sr_icmp_t3_hdr_t *icmp_packet = (sr_icmp_t3_hdr_t *) (ip_packet + sizeof(sr_ip_hdr_t));
-      memcpy(icmp_packet->data, ori_ip_packet, ICMP_DATA_SIZE);
-      
-      icmp_packet->icmp_type = icmp_type;
-      icmp_packet->icmp_code = icmp_code;
-      icmp_packet->icmp_sum = 0;
-      icmp_packet->icmp_sum = cksum(icmp_packet, sizeof(sr_icmp_t3_hdr_t));
-  }
+
+  /* Take the original ip packet back */
+  sr_icmp_t3_hdr_t *icmp_packet = (sr_icmp_t3_hdr_t *) (eth_packet + sizeof(sr_ethernet_hdr_t)+ sizeof(sr_ip_hdr_t));
+  memcpy(icmp_packet->data, ori_ip_packet, ICMP_DATA_SIZE);
+  
+  icmp_packet->icmp_type = icmp_type;
+  icmp_packet->icmp_code = icmp_code;
+  icmp_packet->icmp_sum = 0;
+  icmp_packet->icmp_sum = cksum(icmp_packet, ntohs(ip_packet->ip_len) - (ip_packet->ip_hl * 4));
+  
 
 
   printf("Eth pakcet prepared, ready to send...\n");
