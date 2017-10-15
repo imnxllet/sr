@@ -224,8 +224,8 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
       /* Create Ethenet Packet */
       unsigned int len = (unsigned int) sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t);
       uint8_t *eth_packet = malloc(len);
-      memcpy(eth_packet->ether_dhost, ori_packet->ether_shost, ETHER_ADDR_LEN);
-      memcpy(eth_packet->ether_shost, ori_packet->ether_dhost, ETHER_ADDR_LEN);
+      memcpy((sr_ethernet_hdr_t *)eth_packet->ether_dhost, ori_packet->ether_shost, ETHER_ADDR_LEN);
+      memcpy((sr_ethernet_hdr_t *)eth_packet->ether_shost, ori_packet->ether_dhost, ETHER_ADDR_LEN);
       eth_packet->ether_type = htons(ethertype_ip);
 
       /* Create IP packet */
@@ -233,7 +233,7 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
       ip_packet->ip_hl = 5;
       ip_packet->ip_v = 4;
       ip_packet->ip_tos = 0;
-      ip_packet->ip_len = htons(icmpPacketLen - sizeof(sr_ethernet_hdr_t));
+      ip_packet->ip_len = htons(len - sizeof(sr_ethernet_hdr_t));
       ip_packet>ip_id = htons(1);
       ip_packet->ip_off = htons(IP_DF);
       ip_packet->ip_ttl = 64;
@@ -243,7 +243,7 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
       ip_packet->ip_src = ori_ip_packet->ip_dst;
       
       
-      ip_packet->ip_dst = ori_ip_packet->src;
+      ip_packet->ip_dst = ori_ip_packet->ip_src;
 
       /* Create ICMP Type 0 header*/
       sr_icmp_hdr_t *icmp_packet = (sr_icmp_hdr_t *) ip_packet + sizeof(sr_ip_hdr_t);
@@ -263,16 +263,16 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
   }else{/* Type 3 reply */
       unsigned int len = (unsigned int) sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t);
       uint8_t * eth_packet = malloc(len);
-      memcpy(eth_packet->ether_dhost, ori_packet->ether_shost, ETHER_ADDR_LEN);
-      memcpy(eth_packet->ether_shost, ori_packet->ether_dhost, ETHER_ADDR_LEN);
+      memcpy((sr_ethernet_hdr_t *)eth_packet->ether_dhost, ori_packet->ether_shost, ETHER_ADDR_LEN);
+      memcpy((sr_ethernet_hdr_t *)eth_packet->ether_shost, ori_packet->ether_dhost, ETHER_ADDR_LEN);
       eth_packet->ether_type = htons(ethertype_ip);
 
       /* Create IP packet */
       sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) eth_packet + sizeof(sr_ethernet_hdr_t);
-      ip_packet>ip_hl = 5;
+      ip_packet->ip_hl = 5;
       ip_packet->ip_v = 4;
       ip_packet->ip_tos = 0;
-      ip_packet->ip_len = htons(icmpPacketLen - sizeof(sr_ethernet_hdr_t));
+      ip_packet->ip_len = htons(len - sizeof(sr_ethernet_hdr_t));
       ip_packet>ip_id = htons(1);
       ip_packet->ip_off = htons(IP_DF);
       ip_packet->ip_ttl = 64;
@@ -282,7 +282,7 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
       ip_packet->ip_src = ori_ip_packet->ip_dst;
       
       
-      ip_packet->ip_dst = ori_ip_packet->src;
+      ip_packet->ip_dst = ori_ip_packet->ip_src;
 
       /* Create ICMP Type 0 header*/
       sr_icmp_t3_hdr_t *icmp_packet = (sr_icmp_t3_hdr_t*) ip_packet + sizeof(sr_ip_hdr_t);
