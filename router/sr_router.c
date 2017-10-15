@@ -292,7 +292,7 @@ int send_echo_reply(struct sr_instance* sr,char* iface, uint8_t * ori_packet, un
   ip_packet->ip_sum = 0;
   ip_packet->ip_sum = cksum((uint8_t *) ip_packet, sizeof(sr_ip_hdr_t));
 
-  sr_icmp_hdr_t *icmp_packet = (sr_icmp_hdr_t *) (ip_packet + sizeof(sr_ip_hdr_t));
+  sr_icmp_hdr_t *icmp_packet = (sr_icmp_hdr_t *) (ori_packet + sizeof(sr_ethernet_hdr_t)+ sizeof(sr_ip_hdr_t));
   icmp_packet->icmp_type = 0;
   icmp_packet->icmp_code = 0;
   icmp_packet->icmp_sum = 0;
