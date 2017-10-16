@@ -163,7 +163,7 @@ int sr_handleIPpacket(struct sr_instance* sr,
 
     /* Check if TTL is 0 or 1, send Time out accordingly. */
     if(ip_packet->ip_ttl == 1 || ip_packet->ip_ttl == 0){
-          return sendICMPmessage(sr, 1, 0, interface, packet);
+      return sendICMPmessage(sr, 11, 0, interface, packet);
     }
 
     /* See if this packet is for me or not. */
