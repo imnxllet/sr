@@ -160,16 +160,19 @@ int sr_handleIPpacket(struct sr_instance* sr,
 
     /* TO-DO: Essentially we need to check if this packet is ipv4*/
 
+
+    /* Check if TTL is 0 or 1, send Time out accordingly. */
+    if(ip_packet->ip_ttl == 1 || ip_packet->ip_ttl == 0){
+          return sendICMPmessage(sr, 1, 0, interface, packet);
+    }
+
     /* See if this packet is for me or not. */
     struct sr_if *target_if = (struct sr_if*) checkDestIsIface(ip_packet->ip_dst, sr);
 
     /* This packet is for one of the interfaces */
     if(target_if != 0){
 
-        /* Check if TTL is 0 or 1, send Time out accordingly. */
-        if(ip_packet->ip_ttl == 1 || ip_packet->ip_ttl == 0){
-          return sendICMPmessage(sr, 1, 0, interface, packet);
-        }
+
         /* Check if it's ICMP or TCP/UDP */
         uint8_t ip_proto = ip_protocol((uint8_t *) ip_packet);
 
@@ -188,9 +191,9 @@ int sr_handleIPpacket(struct sr_instance* sr,
 
     /* Packet should be forwarded. */
     }else{
-
       /* Check if Routing Table has entry for targeted ip addr */
       /* use lpm */
+
       struct sr_rt * matching_entry = longest_prefix_match(sr, ip_packet->ip_dst);
 
       /* Found route*/
