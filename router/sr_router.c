@@ -165,8 +165,14 @@ int sr_handleIPpacket(struct sr_instance* sr,
 
     /* This packet is for one of the interfaces */
     if(target_if != 0){
+
+        /* Check if TTL is 0 or 1, send Time out accordingly. */
+        if(ip_packet->ip_ttl == 1 || ip_packet->ip_ttl == 0){
+          return sendICMPmessage(sr, 1, 0, interface, packet);
+        }
         /* Check if it's ICMP or TCP/UDP */
         uint8_t ip_proto = ip_protocol((uint8_t *) ip_packet);
+
         if (ip_proto == ip_protocol_icmp) { /* ICMP, send echo reply */
           printf("This packet is for me(Echo Req), send echo reply back...\n");
           return send_echo_reply(sr, interface, packet, len);
