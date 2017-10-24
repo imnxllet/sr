@@ -171,7 +171,7 @@ int sr_handleIPpacket(struct sr_instance* sr,
     struct sr_if *target_if = (struct sr_if*) checkDestIsIface(ip_packet->ip_dst, sr);
 
     /* This packet is for one of the interfaces */
-    if(target_if != 0){
+    if(target_if != NULL){
 
 
         /* Check if it's ICMP or TCP/UDP */
@@ -228,11 +228,13 @@ int sr_handleIPpacket(struct sr_instance* sr,
 
             }else{/* Hit */
                 printf("Hit in ARP cahce table...\n");
-                uint8_t *temp_dhost = malloc(sizeof(uint8_t) * ETHER_ADDR_LEN);
+                /*uint8_t *temp_dhost = malloc(sizeof(uint8_t) * ETHER_ADDR_LEN);*/
                 memcpy(temp_dhost, ((sr_ethernet_hdr_t *)packet)->ether_dhost, ETHER_ADDR_LEN);
                 memcpy(((sr_ethernet_hdr_t *)packet)->ether_dhost, (uint8_t *) arpentry->mac, ETHER_ADDR_LEN);
-                memcpy(((sr_ethernet_hdr_t *)packet)->ether_shost, temp_dhost, ETHER_ADDR_LEN);
-                free(temp_dhost);
+                /* Problem... should be gw as src not original dest*/
+                struct sr_if* forward_src_iface = sr_get_interface(sr, matching_entry->interface);
+                memcpy(((sr_ethernet_hdr_t *)packet)->ether_shost, forward_src_iface->addr, ETHER_ADDR_LEN);
+                /*free(temp_dhost);*/
                 free(arpentry);
               
                 return sr_send_packet(sr,packet, len, matching_entry->interface);
@@ -347,7 +349,7 @@ struct sr_if* checkDestIsIface(uint32_t ip, struct sr_instance* sr){
         if_walker = if_walker->next;
     }
 
-    return 0;
+    return NULL;
 }
 
 
