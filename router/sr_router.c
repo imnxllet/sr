@@ -122,7 +122,7 @@ void sr_handlepacket(struct sr_instance* sr,
 
         /*sr_ip_hdr *ip_packet = (sr_ip_hdr *) packet_copy + sizeof(sr_ethernet_hdr_t);*/
         printf("This is a IP packet...\n");
-        int handle_signal = sr_handleIPpacket(sr, packet, len, iface); 
+        sr_handleIPpacket(sr, packet, len, iface); 
         return;
 
 
@@ -136,7 +136,7 @@ void sr_handlepacket(struct sr_instance* sr,
         }
         /*sr_arp_hdr_t *arp_packet = (sr_arp_hdr_t *) packet_copy + sizeof(sr_ethernet_hdr_t);*/
         printf("This is a ARP packet...\n");
-        int handle_signal = sr_handleARPpacket(sr, packet, len, iface);
+        sr_handleARPpacket(sr, packet, len, iface);
         return; 
 
     
@@ -209,11 +209,8 @@ int sr_handleIPpacket(struct sr_instance* sr,
                If no response, send ICMP host Unreachable.*/
 
               /* Add ARP req to quene*/
-              struct sr_arpreq * arp_req = sr_arpcache_queuereq(&(sr->cache),
-                                           (uint32_t)((matching_entry->gw).s_addr),
-                                           packet,           /* borrowed */
-                                           len,
-                                           /*matching_entry->interface*/interface);
+              sr_arpcache_queuereq(&(sr->cache),(uint32_t)((matching_entry->gw).s_addr),packet,           /* borrowed */
+                                           len,/*matching_entry->interface*/interface);
 
               /* Doubtful */
               /*free(packet);*/
