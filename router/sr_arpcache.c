@@ -9,6 +9,7 @@
 #include "sr_arpcache.h"
 #include "sr_router.h"
 #include "sr_if.h"
+#include "sr_rt.h"
 #include "sr_protocol.h"
 #include "sr_utils.h"
 
@@ -57,7 +58,7 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
             /* Find outgoing again...*/
             struct sr_rt * matching_entry = longest_prefix_match(sr, req->ip);
             char* iface = malloc(sizeof(char) * sr_IFACE_NAMELEN);
-            memcpy(iface, (char *) matching_entry->interface, sr_IFACE_NAMELEN);
+            memcpy(iface,  matching_entry->interface, sr_IFACE_NAMELEN);
             struct sr_if* gw_if = sr_get_interface(sr, iface);
             
             unsigned int len = (unsigned int) sizeof(sr_ethernet_hdr_t) +  sizeof(sr_arp_hdr_t);
