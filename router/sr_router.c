@@ -229,7 +229,7 @@ int sr_handleIPpacket(struct sr_instance* sr,
             }else{/* Hit */
                 printf("Hit in ARP cahce table...\n");
                 /*uint8_t *temp_dhost = malloc(sizeof(uint8_t) * ETHER_ADDR_LEN);*/
-                memcpy(temp_dhost, ((sr_ethernet_hdr_t *)packet)->ether_dhost, ETHER_ADDR_LEN);
+                /*memcpy(temp_dhost, ((sr_ethernet_hdr_t *)packet)->ether_dhost, ETHER_ADDR_LEN);*/
                 memcpy(((sr_ethernet_hdr_t *)packet)->ether_dhost, (uint8_t *) arpentry->mac, ETHER_ADDR_LEN);
                 /* Problem... should be gw as src not original dest*/
                 struct sr_if* forward_src_iface = sr_get_interface(sr, matching_entry->interface);
