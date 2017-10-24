@@ -182,7 +182,7 @@ int sr_handleIPpacket(struct sr_instance* sr,
           printf("This packet is for me(Echo Req), Initialize ARP req..\n");
           sr_arpcache_queuereq(&(sr->cache),ip_packet->ip_src,packet,           /* borrowed */
                                            len,/*matching_entry->interface*/interface);
-          /*return send_echo_reply(sr, interface, packet, len);
+          /*return send_echo_reply(sr, interface, packet, len);*/
 
 
         }else if(ip_proto == 0x0006 || ip_proto == 0x11){ /* TCP/UDP, Send ICMP Port Unreachable */
@@ -315,7 +315,7 @@ int sr_handleARPpacket(struct sr_instance* sr,
               uint8_t ip_proto = ip_protocol((uint8_t *) ip_packet);
 
               if (ip_proto == ip_protocol_icmp)            
-                  send_echo_reply(sr,interface, uint8_t * pkt->buf, pkt->len);
+                  send_echo_reply(sr,interface,  pkt->buf, pkt->len);
               else
                   sr_send_packet(sr, pkt->buf, pkt->len, interface);             
           }
