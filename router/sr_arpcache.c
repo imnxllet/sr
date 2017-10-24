@@ -56,7 +56,7 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
             /* pkt->iface store the incoming iface of pkt not outgoing..*/
             /* Find outgoing again...*/
             struct sr_rt * matching_entry = longest_prefix_match(sr, req->ip);
-            struct sr_if* gw_if = sr_get_interface(sr, &(matching_entry->interface));
+            struct sr_if* gw_if = sr_get_interface(sr, (const char*)matching_entry->interface);
             
             unsigned int len = (unsigned int) sizeof(sr_ethernet_hdr_t) +  sizeof(sr_arp_hdr_t);
   
@@ -80,7 +80,7 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
             memcpy(arp_request->ar_sha, gw_if->addr,ETHER_ADDR_LEN);/* sender hardware address      */
             arp_reply->ar_sip = gw_if->ip;             /* sender IP address            */
             
-            memcpy(arp_request->ar_tha, 0, ETHER_ADDR_LEN);/* target hardware address unknown*/
+            memset(arp_request->ar_tha, 0, ETHER_ADDR_LEN);/* target hardware address unknown*/
             arp_reply->ar_tip = req->ip ; /* target ip known*/
 
             printf("Sending back ARP request...Detail below:\n");  
@@ -91,7 +91,7 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
             /* update ARP req */
             req->sent = time(NULL);
             req->times_sent += 1;
-            return sr_send_packet(sr,eth_packet, /*uint8_t*/ /*unsigned int*/ len, &(matching_entry->interface));
+            return sr_send_packet(sr,eth_packet, /*uint8_t*/ /*unsigned int*/ len, (const char*)matching_entry->interface);
         }
     }
         
