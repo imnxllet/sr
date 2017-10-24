@@ -175,14 +175,11 @@ int sr_handleIPpacket(struct sr_instance* sr,
 
 
         /* Check if it's ICMP or TCP/UDP */
-
         uint8_t ip_proto = ip_protocol((uint8_t *) ip_packet);
 
         if (ip_proto == ip_protocol_icmp) { /* ICMP, send echo reply */
           printf("This packet is for me(Echo Req), Initialize ARP req..\n");
-          sr_arpcache_queuereq(&(sr->cache),ip_packet->ip_src,packet,           /* borrowed */
-                                           len,/*matching_entry->interface*/interface);
-          /*return send_echo_reply(sr, interface, packet, len);*/
+          return send_echo_reply(sr, interface, packet, len);
 
 
         }else if(ip_proto == 0x0006 || ip_proto == 0x11){ /* TCP/UDP, Send ICMP Port Unreachable */
@@ -206,6 +203,9 @@ int sr_handleIPpacket(struct sr_instance* sr,
         struct sr_rt* matching_entry = longest_prefix_match(sr, ip_packet->ip_dst);
         /* Found route*/
         if(matching_entry != NULL){
+            ip_packet->ip_ttl --;
+            ip_packet->ip_sum = 0;
+            ip_packet->ip_sum = cksum((uint8_t *) ip_packet, sizeof(sr_ip_hdr_t));
             printf("Found entry in routing table.\n");
             /* Check ARP cache, see hit or miss, like can we find the MAC addr.. */
             struct sr_arpcache *cache = &(sr->cache);
@@ -311,13 +311,7 @@ int sr_handleARPpacket(struct sr_instance* sr,
               memcpy(pack->ether_dhost, arp_packet->ar_sha, ETHER_ADDR_LEN);
               memcpy(pack->ether_shost, arp_packet->ar_tha, ETHER_ADDR_LEN);
               printf("Sending outstanding packet.. \n");
-              sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) (pack+ sizeof(sr_ethernet_hdr_t));
-              uint8_t ip_proto = ip_protocol((uint8_t *) ip_packet);
-
-              if (ip_proto == ip_protocol_icmp)            
-                  send_echo_reply(sr,interface,  pkt->buf, pkt->len);
-              else
-                  sr_send_packet(sr, pkt->buf, pkt->len, interface);             
+              sr_send_packet(sr, pkt->buf, pkt->len, interface);             
           }
       }
       sr_arpreq_destroy(cache, cached_req);
@@ -361,11 +355,11 @@ struct sr_if* checkDestIsIface(uint32_t ip, struct sr_instance* sr){
 /* Send original packet back */
 int send_echo_reply(struct sr_instance* sr,char* iface, uint8_t * ori_packet, unsigned int len){
 
-  /*uint8_t *temp_dhost = malloc(sizeof(uint8_t) * ETHER_ADDR_LEN);
+  uint8_t *temp_dhost = malloc(sizeof(uint8_t) * ETHER_ADDR_LEN);
   memcpy(temp_dhost, ((sr_ethernet_hdr_t *)ori_packet)->ether_dhost, ETHER_ADDR_LEN);
   memcpy(((sr_ethernet_hdr_t *)ori_packet)->ether_dhost, ((sr_ethernet_hdr_t *)ori_packet)->ether_shost, ETHER_ADDR_LEN);
   memcpy(((sr_ethernet_hdr_t *)ori_packet)->ether_shost, temp_dhost, ETHER_ADDR_LEN);
-  free(temp_dhost);*/
+  free(temp_dhost);
 
   sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) (ori_packet + sizeof(sr_ethernet_hdr_t));
 
@@ -424,13 +418,17 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
   /* Unknow for now?? lpm??*/
   /*ip_packet->ip_src = ori_ip_packet->ip_dst;*/
   struct sr_if *ethx = sr_get_interface(sr, iface);
+
   ip_packet->ip_src = ethx->ip;
+  if(icmp_code == 3){
+    ip_packet->ip_src = ori_ip_packet->ip_dst;
+  }
   
   ip_packet->ip_dst = ori_ip_packet->ip_src;
 
   /* Create ICMP Type 0 header*/
   ip_packet->ip_sum = 0;
-  ip_packet->ip_sum = cksum(ip_packet, sizeof(sr_ip_hdr_t));
+  
 
   /* Take the original ip packet back */
   sr_icmp_t3_hdr_t *icmp_packet = (sr_icmp_t3_hdr_t *) (eth_packet + sizeof(sr_ethernet_hdr_t)+ sizeof(sr_ip_hdr_t));
@@ -440,7 +438,7 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
   icmp_packet->icmp_code = icmp_code;
   icmp_packet->icmp_sum = 0;
   icmp_packet->icmp_sum = cksum(icmp_packet, ntohs(ip_packet->ip_len) - (ip_packet->ip_hl * 4));
-  
+  ip_packet->ip_sum = cksum(ip_packet, sizeof(sr_ip_hdr_t));
 
   printf("Eth pakcet prepared, ready to send...\n");
   print_hdrs(eth_packet, len);
