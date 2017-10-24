@@ -159,13 +159,13 @@ int sr_handleIPpacket(struct sr_instance* sr,
     sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) (packet + sizeof(sr_ethernet_hdr_t));
 
     /* TO-DO: Essentially we need to check if this packet is ipv4*/
-
-
-    /* Check if TTL is 0 or 1, send Time out accordingly. */
-    if(ip_packet->ip_ttl == 1 || ip_packet->ip_ttl == 0){
+        /* Check if TTL is 0 or 1, send Time out accordingly. */
+    /*if(ip_packet->ip_ttl == 1 || ip_packet->ip_ttl == 0){
       printf("TTL too short, send ICMP\n");
       return sendICMPmessage(sr, 11, 0, interface, packet);
-    }
+    }*/
+
+
 
     /* See if this packet is for me or not. */
     struct sr_if *target_if = (struct sr_if*) checkDestIsIface(ip_packet->ip_dst, sr);
@@ -175,11 +175,14 @@ int sr_handleIPpacket(struct sr_instance* sr,
 
 
         /* Check if it's ICMP or TCP/UDP */
+
         uint8_t ip_proto = ip_protocol((uint8_t *) ip_packet);
 
         if (ip_proto == ip_protocol_icmp) { /* ICMP, send echo reply */
-          printf("This packet is for me(Echo Req), send echo reply back...\n");
-          return send_echo_reply(sr, interface, packet, len);
+          printf("This packet is for me(Echo Req), Initialize ARP req..\n");
+          sr_arpcache_queuereq(&(sr->cache),ip_packet->ip_src,packet,           /* borrowed */
+                                           len,/*matching_entry->interface*/interface);
+          /*return send_echo_reply(sr, interface, packet, len);
 
 
         }else if(ip_proto == 0x0006 || ip_proto == 0x11){ /* TCP/UDP, Send ICMP Port Unreachable */
@@ -192,6 +195,11 @@ int sr_handleIPpacket(struct sr_instance* sr,
 
     /* Packet should be forwarded. */
     }else{
+            /* Check if TTL is 0 or 1, send Time out accordingly. */
+        if(ip_packet->ip_ttl == 1 || ip_packet->ip_ttl == 0){
+            printf("TTL too short, send ICMP\n");
+            return sendICMPmessage(sr, 11, 0, interface, packet);
+        }
         printf("This packet should be forwarded..\n");
         /* Check if Routing Table has entry for targeted ip addr */
         /* use lpm */
@@ -213,6 +221,7 @@ int sr_handleIPpacket(struct sr_instance* sr,
               sr_arpcache_queuereq(&(sr->cache),(uint32_t)((matching_entry->gw).s_addr),packet,           /* borrowed */
                                            len,/*matching_entry->interface*/interface);
 
+              return 0;
               /* Doubtful */
               /*free(packet);*/
 
@@ -302,7 +311,13 @@ int sr_handleARPpacket(struct sr_instance* sr,
               memcpy(pack->ether_dhost, arp_packet->ar_sha, ETHER_ADDR_LEN);
               memcpy(pack->ether_shost, arp_packet->ar_tha, ETHER_ADDR_LEN);
               printf("Sending outstanding packet.. \n");
-              sr_send_packet(sr, pkt->buf, pkt->len, interface);             
+              sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) (pack+ sizeof(sr_ethernet_hdr_t));
+              uint8_t ip_proto = ip_protocol((uint8_t *) ip_packet);
+
+              if (ip_proto == ip_protocol_icmp)            
+                  send_echo_reply(sr,interface, uint8_t * pkt->buf, pkt->len);
+              else
+                  sr_send_packet(sr, pkt->buf, pkt->len, interface);             
           }
       }
       sr_arpreq_destroy(cache, cached_req);
@@ -346,11 +361,11 @@ struct sr_if* checkDestIsIface(uint32_t ip, struct sr_instance* sr){
 /* Send original packet back */
 int send_echo_reply(struct sr_instance* sr,char* iface, uint8_t * ori_packet, unsigned int len){
 
-  uint8_t *temp_dhost = malloc(sizeof(uint8_t) * ETHER_ADDR_LEN);
+  /*uint8_t *temp_dhost = malloc(sizeof(uint8_t) * ETHER_ADDR_LEN);
   memcpy(temp_dhost, ((sr_ethernet_hdr_t *)ori_packet)->ether_dhost, ETHER_ADDR_LEN);
   memcpy(((sr_ethernet_hdr_t *)ori_packet)->ether_dhost, ((sr_ethernet_hdr_t *)ori_packet)->ether_shost, ETHER_ADDR_LEN);
   memcpy(((sr_ethernet_hdr_t *)ori_packet)->ether_shost, temp_dhost, ETHER_ADDR_LEN);
-  free(temp_dhost);
+  free(temp_dhost);*/
 
   sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) (ori_packet + sizeof(sr_ethernet_hdr_t));
 
