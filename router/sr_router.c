@@ -196,11 +196,11 @@ int sr_handleIPpacket(struct sr_instance* sr,
       /* use lpm */
       struct sr_rt * matching_entry = longest_prefix_match(sr, ip_packet->ip_dst);
       /* Found route*/
-      if(matching_entry != -1){
+      if(matching_entry != NULL){
         printf("Found entry in routing table.\n");
         /* Check ARP cache, see hit or miss, like can we find the MAC addr.. */
 
-        struct sr_arpentry *arpentry = sr_arpcache_lookup(sr->cache, (uint32_t)(matching_entry->gw).s_addr);
+        struct sr_arpentry *arpentry = sr_arpcache_lookup(sr->cache, (uint32_t)((matching_entry->gw).s_addr);
 
         /* Miss ARP */
         if (arpentry == NULL){
@@ -210,7 +210,7 @@ int sr_handleIPpacket(struct sr_instance* sr,
 
           /* Add ARP req to quene*/
           struct sr_arpreq * arp_req = sr_arpcache_queuereq(&(sr->cache),
-                                       (uint32_t)(matching_entry->gw).s_addr
+                                       (uint32_t)((matching_entry->gw).s_addr),
                                        packet,           /* borrowed */
                                        len,
                                        /*matching_entry->interface*/interface);
@@ -454,7 +454,7 @@ struct sr_rt* longest_prefix_match(struct sr_instance* sr, uint32_t ip){
     
     /* Check if we find a matching entry */
     if(length == 0){
-      return -1;
+      return NULL;
     }
 
     return rtable;
