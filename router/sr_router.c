@@ -191,52 +191,50 @@ int sr_handleIPpacket(struct sr_instance* sr,
 
     /* Packet should be forwarded. */
     }else{
-      printf("This packet should be forwarded..\n");
-      /* Check if Routing Table has entry for targeted ip addr */
-      /* use lpm */
-      struct sr_rt * matching_entry = longest_prefix_match(sr, ip_packet->ip_dst);
-      /* Found route*/
-      if(matching_entry != NULL){
-        printf("Found entry in routing table.\n");
-        /* Check ARP cache, see hit or miss, like can we find the MAC addr.. */
+        printf("This packet should be forwarded..\n");
+        /* Check if Routing Table has entry for targeted ip addr */
+        /* use lpm */
+        struct sr_rt* matching_entry = longest_prefix_match(sr, ip_packet->ip_dst);
+        /* Found route*/
+        if(matching_entry != NULL){
+            printf("Found entry in routing table.\n");
+            /* Check ARP cache, see hit or miss, like can we find the MAC addr.. */
+            struct sr_arpcache *cache = &(sr->cache);
+            struct sr_arpentry* arpentry = sr_arpcache_lookup(cache, (uint32_t)((matching_entry->gw).s_addr));
 
-        struct sr_arpentry *arpentry = sr_arpcache_lookup(sr->cache, (uint32_t)((matching_entry->gw).s_addr);
+            /* Miss ARP */
+            if (arpentry == NULL){
+              printf("Miss in ARP cache table..\n");
+              /* Send ARP request for 5 times. 
+               If no response, send ICMP host Unreachable.*/
 
-        /* Miss ARP */
-        if (arpentry == NULL){
-          printf("Miss in ARP cache table..\n");
-          /* Send ARP request for 5 times. 
-           If no response, send ICMP host Unreachable.*/
+              /* Add ARP req to quene*/
+              struct sr_arpreq * arp_req = sr_arpcache_queuereq(&(sr->cache),
+                                           (uint32_t)((matching_entry->gw).s_addr),
+                                           packet,           /* borrowed */
+                                           len,
+                                           /*matching_entry->interface*/interface);
 
-          /* Add ARP req to quene*/
-          struct sr_arpreq * arp_req = sr_arpcache_queuereq(&(sr->cache),
-                                       (uint32_t)((matching_entry->gw).s_addr),
-                                       packet,           /* borrowed */
-                                       len,
-                                       /*matching_entry->interface*/interface);
-
-          /* Doubtful */
-          free(packet);
+              /* Doubtful */
+              free(packet);
 
 
-        }else{/* Hit */
-            printf("Hit in ARP cahce table...\n");
-            uint8_t *temp_dhost = malloc(sizeof(uint8_t) * ETHER_ADDR_LEN);
-            memcpy(temp_dhost, ((sr_ethernet_hdr_t *)packet)->ether_dhost, ETHER_ADDR_LEN);
-            memcpy(((sr_ethernet_hdr_t *)packet)->ether_dhost, (uint8_t *) arpentry->mac, ETHER_ADDR_LEN);
-            memcpy(((sr_ethernet_hdr_t *)packet)->ether_shost, temp_dhost, ETHER_ADDR_LEN);
-            free(temp_dhost);
-            free(arpentry);
-          
-            return sr_send_packet(sr,packet, len, matching_entry->interface);
+            }else{/* Hit */
+                printf("Hit in ARP cahce table...\n");
+                uint8_t *temp_dhost = malloc(sizeof(uint8_t) * ETHER_ADDR_LEN);
+                memcpy(temp_dhost, ((sr_ethernet_hdr_t *)packet)->ether_dhost, ETHER_ADDR_LEN);
+                memcpy(((sr_ethernet_hdr_t *)packet)->ether_dhost, (uint8_t *) arpentry->mac, ETHER_ADDR_LEN);
+                memcpy(((sr_ethernet_hdr_t *)packet)->ether_shost, temp_dhost, ETHER_ADDR_LEN);
+                free(temp_dhost);
+                free(arpentry);
+              
+                return sr_send_packet(sr,packet, len, matching_entry->interface);
+            }
+
+        }else{/* No match */
+          printf("Did not find target ip in rtable..\n");
+          return sendICMPmessage(sr, 3, 0, interface, packet);
         }
-
-          return 0;
-
-      }else{/* No match */
-        printf("Did not find target ip in rtable..\n");
-        return sendICMPmessage(sr, 3, 0, interface, packet);
-      }
 
     }
     return 0;
@@ -296,15 +294,15 @@ int sr_handleARPpacket(struct sr_instance* sr,
       struct sr_arpreq *cached_req = sr_arpcache_insert(cache, arp_packet->ar_sha, arp_packet->ar_sip);
       /* send outstanding packts */
       struct sr_packet *pkt, *nxt;
-      for (pkt = req->packets; pkt; pkt = nxt) {
+      for (pkt = cached_req->packets; pkt; pkt = nxt) {
           nxt = pkt->next;
           if (pkt->buf){
-              sr_ip_hdr_t * pack = (sr_ip_hdr_t *) (pkt->buf);
+              sr_ethernet_hdr_t * pack = (sr_ethernet_hdr_t *) (pkt->buf);
             
               memcpy(pack->ether_dhost, arp_packet->ar_sha, ETHER_ADDR_LEN);
               memcpy(pack->ether_shost, arp_packet->ar_tha, ETHER_ADDR_LEN);
 
-              sr_send_packet(sr, pack, pack->len, interface);             
+              sr_send_packet(sr, pkt->buf, pkt->len, interface);             
           }
       }
       sr_arpreq_destroy(cache, cached_req);
