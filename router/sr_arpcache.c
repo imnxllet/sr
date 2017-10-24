@@ -43,7 +43,7 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
                     /* I need to know the iface rto send ICMP back..*/
                     /* I have original packet's destination MAC*/
                     /* Find if from this mac addr..*/
-
+                    printf("No ARP reply after 5 requests, send host unreachable..\n");
                     sendICMPmessage(sr, 3, 1, pkt->iface, pkt->buf);
                     
                 }
@@ -86,7 +86,7 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
             memset(arp_request->ar_tha, 0, ETHER_ADDR_LEN);/* target hardware address unknown*/
             arp_request->ar_tip = req->ip ; /* target ip known*/
 
-            printf("Sending back ARP request...Detail below:\n");  
+            printf("Sending ARP request...Detail below:\n");  
             print_hdrs(eth_packet, len);         
             
             
