@@ -56,7 +56,7 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
             /* pkt->iface store the incoming iface of pkt not outgoing..*/
             /* Find outgoing again...*/
             struct sr_rt * matching_entry = longest_prefix_match(sr, req->ip);
-            const char* iface = malloc(sizeof(char) * sr_IFACE_NAMELEN);
+            char* iface = malloc(sizeof(char) * sr_IFACE_NAMELEN);
             memcpy(iface, matching_entry->interface, sr_IFACE_NAMELEN);
             struct sr_if* gw_if = sr_get_interface(sr, iface);
             
