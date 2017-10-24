@@ -438,6 +438,7 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
 struct sr_rt* longest_prefix_match(struct sr_instance* sr, uint32_t ip){
 
     struct sr_rt *rtable = sr->routing_table;
+    struct sr_rt *match = NULL;
     unsigned long length = 0;
     while (rtable){
         /* Check which entry has the same ip addr as given one */
@@ -445,6 +446,7 @@ struct sr_rt* longest_prefix_match(struct sr_instance* sr, uint32_t ip){
             /* Check if it's longer based on the mask */
           if (length == 0 || length < (rtable->mask).s_addr){
             length = (rtable->mask).s_addr;
+            match = rtable;
           }         
         }
         rtable = rtable->next;
@@ -455,5 +457,5 @@ struct sr_rt* longest_prefix_match(struct sr_instance* sr, uint32_t ip){
       return NULL;
     }
 
-    return rtable;
+    return match;
 }
