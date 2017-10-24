@@ -10,6 +10,7 @@
 #include "sr_router.h"
 #include "sr_if.h"
 #include "sr_protocol.h"
+#include "sr_utils.h"
 
 /* 
   This function gets called every second. For each request sent out, we keep
@@ -41,6 +42,7 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
                     /* I need to know the iface rto send ICMP back..*/
                     /* I have original packet's destination MAC*/
                     /* Find if from this mac addr..*/
+
                     sendICMPmessage(sr, 3, 1, pkt->iface, pkt->buf);
                     
                 }
@@ -54,9 +56,9 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
             /* pkt->iface store the incoming iface of pkt not outgoing..*/
             /* Find outgoing again...*/
             struct sr_rt * matching_entry = longest_prefix_match(sr, req->ip);
-            struct sr_if* gw_if = sr_get_interface(sr, matching_entry->interface);
+            struct sr_if* gw_if = sr_get_interface(sr, &(matching_entry->interface));
             
-            len = (unsigned int) sizeof(sr_ethernet_hdr_t) +  sizeof(sr_arp_hdr_t);
+            unsigned int len = (unsigned int) sizeof(sr_ethernet_hdr_t) +  sizeof(sr_arp_hdr_t);
   
             uint8_t *eth_packet = malloc(len);
             /* FFFFFFFF as dhost*/
@@ -68,17 +70,17 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
             /* Create IP packet */
             sr_arp_hdr_t *arp_request = (sr_arp_hdr_t*) (eth_packet + sizeof(sr_ethernet_hdr_t));
 
-            arp_reply->ar_hrd = htons(arp_hrd_ethernet);             /* format of hardware address   */
-            arp_reply->ar_pro = htons(0x0800);             /* format of protocol address   */
-            arp_reply->ar_hln = 6;             /* length of hardware address   */
-            arp_reply->ar_pln = 4;             /* length of protocol address   */
-            arp_reply->ar_op = htons(arp_op_request);              /* ARP opcode (command)         */
+            arp_request->ar_hrd = htons(arp_hrd_ethernet);             /* format of hardware address   */
+            arp_request->ar_pro = htons(0x0800);             /* format of protocol address   */
+            arp_request->ar_hln = 6;             /* length of hardware address   */
+            arp_request->ar_pln = 4;             /* length of protocol address   */
+            arp_request->ar_op = htons(arp_op_request);              /* ARP opcode (command)         */
             
 
-            memcpy(arp_reply->ar_sha, gw->addr,ETHER_ADDR_LEN);/* sender hardware address      */
-            arp_reply->ar_sip = gw->ip;             /* sender IP address            */
+            memcpy(arp_request->ar_sha, gw_if->addr,ETHER_ADDR_LEN);/* sender hardware address      */
+            arp_reply->ar_sip = gw_if->ip;             /* sender IP address            */
             
-            memcpy(arp_reply->ar_tha, 0,ETHER_ADDR_LEN);/* target hardware address unknown*/
+            memcpy(arp_request->ar_tha, 0, ETHER_ADDR_LEN);/* target hardware address unknown*/
             arp_reply->ar_tip = req->ip ; /* target ip known*/
 
             printf("Sending back ARP request...Detail below:\n");  
@@ -89,7 +91,7 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
             /* update ARP req */
             req->sent = time(NULL);
             req->times_sent += 1;
-            return sr_send_packet(sr,eth_packet, /*uint8_t*/ /*unsigned int*/ len, matching_entry->interface);
+            return sr_send_packet(sr,eth_packet, /*uint8_t*/ /*unsigned int*/ len, &(matching_entry->interface));
         }
     }
         
