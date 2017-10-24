@@ -216,7 +216,7 @@ int sr_handleIPpacket(struct sr_instance* sr,
                                            /*matching_entry->interface*/interface);
 
               /* Doubtful */
-              free(packet);
+              /*free(packet);*/
 
 
             }else{/* Hit */
