@@ -56,7 +56,8 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
             /* pkt->iface store the incoming iface of pkt not outgoing..*/
             /* Find outgoing again...*/
             struct sr_rt * matching_entry = longest_prefix_match(sr, req->ip);
-            struct sr_if* gw_if = sr_get_interface(sr, (const char*)matching_entry->interface);
+            const char* iface = &(matching_entry->interface);
+            struct sr_if* gw_if = sr_get_interface(sr, iface);
             
             unsigned int len = (unsigned int) sizeof(sr_ethernet_hdr_t) +  sizeof(sr_arp_hdr_t);
   
@@ -78,7 +79,7 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
             
 
             memcpy(arp_request->ar_sha, gw_if->addr,ETHER_ADDR_LEN);/* sender hardware address      */
-            arp_reply->ar_sip = gw_if->ip;             /* sender IP address            */
+            arp_request->ar_sip = gw_if->ip;             /* sender IP address            */
             
             memset(arp_request->ar_tha, 0, ETHER_ADDR_LEN);/* target hardware address unknown*/
             arp_reply->ar_tip = req->ip ; /* target ip known*/
