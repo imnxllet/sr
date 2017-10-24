@@ -297,10 +297,9 @@ int sr_handleARPpacket(struct sr_instance* sr,
       printf("This is an ARP reply...\n"); 
 
       /* cache it */
-      printf("Caching the ip->mac entry, table as below: \n");
+      printf("Caching the ip->mac entry \n");
       struct sr_arpcache *cache = &(sr->cache);
       struct sr_arpreq *cached_req = sr_arpcache_insert(cache, arp_packet->ar_sha, arp_packet->ar_sip);
-      sr_arpcache_dump(cache);
       /* send outstanding packts */
       struct sr_packet *pkt, *nxt;
       for (pkt = cached_req->packets; pkt; pkt = nxt) {
