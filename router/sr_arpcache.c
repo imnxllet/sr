@@ -18,6 +18,83 @@
 */
 void sr_arpcache_sweepreqs(struct sr_instance *sr) { 
     /* Fill this in */
+    struct sr_arpcache *cache = &(sr->cache);
+    
+    /* Loop over the request and send outstanding requests */
+
+        
+  struct sr_arpreq *req;
+    for (req = cache->requests; req != NULL; req = req->next) {
+        /*time_t curtime = time(NULL);*/
+
+        /* Check if this req is sent before*/
+        if (!(req->times_sent)) {
+            req->times_sent = 0;         
+        }
+
+        if(req->times_sent >= 5){/* Destroy the ARP req and Send ICMP host unreachable.*/
+            
+            struct sr_packet *pkt, *nxt;
+            for (pkt = req->packets; pkt; pkt = nxt) {
+                nxt = pkt->next;
+                if (pkt->buf){
+                    /* I need to know the iface rto send ICMP back..*/
+                    /* I have original packet's destination MAC*/
+                    /* Find if from this mac addr..*/
+                    sendICMPmessage(sr, 3, 1, pkt->iface, pkt->buf);
+                    
+                }
+
+            }
+            sr_arpreq_destroy(cache, req);
+            return;
+            
+        }else{
+                        /* Send the ARP request */
+            /* pkt->iface store the incoming iface of pkt not outgoing..*/
+            /* Find outgoing again...*/
+            struct sr_rt * matching_entry = longest_prefix_match(sr, req->ip);
+            struct sr_if* gw_if = sr_get_interface(sr, matching_entry->interface);
+            
+            len = (unsigned int) sizeof(sr_ethernet_hdr_t) +  sizeof(sr_arp_hdr_t);
+  
+            uint8_t *eth_packet = malloc(len);
+            /* FFFFFFFF as dhost*/
+            memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_dhost, (uint8_t *) BROADCAST_mac, ETHER_ADDR_LEN);
+            /* Source MAC is current Interface*/
+            memcpy(((sr_ethernet_hdr_t *)eth_packet)->ether_shost, gw_if->addr, ETHER_ADDR_LEN);
+            ((sr_ethernet_hdr_t *)eth_packet)->ether_type = htons(ethertype_arp);
+
+            /* Create IP packet */
+            sr_arp_hdr_t *arp_request = (sr_arp_hdr_t*) (eth_packet + sizeof(sr_ethernet_hdr_t));
+
+            arp_reply->ar_hrd = htons(arp_hrd_ethernet);             /* format of hardware address   */
+            arp_reply->ar_pro = htons(0x0800);             /* format of protocol address   */
+            arp_reply->ar_hln = 6;             /* length of hardware address   */
+            arp_reply->ar_pln = 4;             /* length of protocol address   */
+            arp_reply->ar_op = htons(arp_op_request);              /* ARP opcode (command)         */
+            
+
+            memcpy(arp_reply->ar_sha, gw->addr,ETHER_ADDR_LEN);/* sender hardware address      */
+            arp_reply->ar_sip = gw->ip;             /* sender IP address            */
+            
+            memcpy(arp_reply->ar_tha, 0,ETHER_ADDR_LEN);/* target hardware address unknown*/
+            arp_reply->ar_tip = req->ip ; /* target ip known*/
+
+            printf("Sending back ARP request...Detail below:\n");  
+            print_hdrs(eth_packet, len);         
+            
+            
+
+            /* update ARP req */
+            req->sent = time(NULL);
+            req->times_sent += 1;
+            return sr_send_packet(sr,eth_packet, /*uint8_t*/ /*unsigned int*/ len, matching_entry->interface);
+        }
+    }
+        
+      
+
 }
 
 /* You should not need to touch the rest of this code. */

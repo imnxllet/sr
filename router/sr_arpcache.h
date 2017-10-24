@@ -73,6 +73,7 @@
 
 #define SR_ARPCACHE_SZ    100  
 #define SR_ARPCACHE_TO    15.0
+#define BROADCAST_mac "\xff\xff\xff\xff\xff\xff"
 
 struct sr_packet {
     uint8_t *buf;               /* A raw Ethernet frame, presumably with the dest MAC empty */
