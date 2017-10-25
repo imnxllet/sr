@@ -98,8 +98,8 @@ void sr_handlepacket(struct sr_instance* sr,
     /*uint8_t *packet_copy =  (uint8_t *) malloc(sizeof(uint8_t) * len);
     memcpy(packet_copy, packet,len);*/
 
-    char *iface = (char *) malloc(sizeof(char) * (strlen(interface) + 1));
-    memcpy(iface, interface, strlen(interface) + 1);
+    /*char *iface = (char *) malloc(sizeof(char) * (strlen(interface) + 1));
+    memcpy(iface, interface, strlen(interface) + 1);*/
     
     /* Save destination and source MAC address */
     /* Might not need this... */
@@ -122,7 +122,7 @@ void sr_handlepacket(struct sr_instance* sr,
 
         /*sr_ip_hdr *ip_packet = (sr_ip_hdr *) packet_copy + sizeof(sr_ethernet_hdr_t);*/
         printf("This is a IP packet...\n");
-        sr_handleIPpacket(sr, packet, len, iface); 
+        sr_handleIPpacket(sr, packet, len, interface); 
         return;
 
 
@@ -136,7 +136,7 @@ void sr_handlepacket(struct sr_instance* sr,
         }
         /*sr_arp_hdr_t *arp_packet = (sr_arp_hdr_t *) packet_copy + sizeof(sr_ethernet_hdr_t);*/
         printf("This is a ARP packet...\n");
-        sr_handleARPpacket(sr, packet, len, iface);
+        sr_handleARPpacket(sr, packet, len, interface);
         return; 
 
     
@@ -303,7 +303,9 @@ int sr_handleARPpacket(struct sr_instance* sr,
         printf("Sending back ARP reply...Detail below:\n");  
         print_hdrs(eth_packet, len);         
         
-        return sr_send_packet(sr,eth_packet, /*uint8_t*/ /*unsigned int*/ len, interface);
+        sr_send_packet(sr,eth_packet, /*uint8_t*/ /*unsigned int*/ len, interface);
+        free(eth_packet);
+        return 0;
 
     }else if(arp_packet->ar_op == htons(arp_op_reply)){
       printf("This is an ARP reply...\n"); 
@@ -479,7 +481,10 @@ int sendICMPmessage(struct sr_instance* sr, uint8_t icmp_type,
   printf("Eth pakcet prepared, ready to send...\n");
   print_hdrs(eth_packet, len);
   printf("--------------------------\n");
-  return sr_send_packet(sr,eth_packet, /*uint8_t*/ /*unsigned int*/ len, iface);
+  sr_send_packet(sr,eth_packet, /*uint8_t*/ /*unsigned int*/ len, iface);
+
+  free(eth_packet);
+  return 0;
 
 }
 
