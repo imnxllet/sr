@@ -22,13 +22,9 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
     /* Fill this in */
     struct sr_arpcache *cache = &(sr->cache);
     
-    /* Loop over the request and send outstanding requests */
-
-        
-  struct sr_arpreq *req;
+    /* Loop over the request and send outstanding requests */     
+    struct sr_arpreq *req;
     for (req = cache->requests; req != NULL; req = req->next) {
-        /*time_t curtime = time(NULL);*/
-
         /* Check if this req is sent before*/
         if (!(req->times_sent)) {
             req->times_sent = 0;         
@@ -40,12 +36,8 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
             for (pkt = req->packets; pkt; pkt = nxt) {
                 nxt = pkt->next;
                 if (pkt->buf){
-                    /* I need to know the iface rto send ICMP back..*/
-                    /* I have original packet's destination MAC*/
-                    /* Find if from this mac addr..*/
                     printf("No ARP reply after 5 requests, send host unreachable..\n");
-                    sendICMPmessage(sr, 3, 1, pkt->iface, pkt->buf);
-                    
+                    sendICMPmessage(sr, 3, 1, pkt->iface, pkt->buf);                 
                 }
 
             }
@@ -53,12 +45,10 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
             return;
             
         }else{
-                        /* Send the ARP request */
+            /* Send the ARP request */
             /* pkt->iface store the incoming iface of pkt not outgoing..*/
             /* Find outgoing again...*/
             struct sr_rt * matching_entry = longest_prefix_match(sr, req->ip);
-            /*char* iface = malloc(sizeof(char) * sr_IFACE_NAMELEN);
-            memcpy(iface,  matching_entry->interface, sr_IFACE_NAMELEN);*/
             struct sr_if* gw_if = sr_get_interface(sr, matching_entry->interface);
             
             unsigned int len = (unsigned int) sizeof(sr_ethernet_hdr_t) +  sizeof(sr_arp_hdr_t);
@@ -79,7 +69,6 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
             arp_request->ar_pln = 4;             /* length of protocol address   */
             arp_request->ar_op = htons(arp_op_request);              /* ARP opcode (command)         */
             
-
             memcpy(arp_request->ar_sha, gw_if->addr,ETHER_ADDR_LEN);/* sender hardware address      */
             arp_request->ar_sip = gw_if->ip;             /* sender IP address            */
             
@@ -89,8 +78,6 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
             printf("Sending ARP request...Detail below:\n");  
             print_hdrs(eth_packet, len);         
             
-            
-
             /* update ARP req */
             req->sent = time(NULL);
             req->times_sent += 1;
