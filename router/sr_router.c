@@ -175,12 +175,24 @@ int sr_handleIPpacket(struct sr_instance* sr,
 
 
         /* Check if it's ICMP or TCP/UDP */
+
         uint8_t ip_proto = ip_protocol((uint8_t *) ip_packet);
 
         if (ip_proto == ip_protocol_icmp) { /* ICMP, send echo reply */
+        /*TO:DO: check this is echo req...*/
           printf("This packet is for me(Echo Req), Initialize ARP req..\n");
-          return send_echo_reply(sr, interface, packet, len);
+          struct sr_arpcache *cache = &(sr->cache);
+          struct sr_rt* matching_entry = longest_prefix_match(sr, ip_packet->ip_src);
+          struct sr_arpentry* arpentry = sr_arpcache_lookup(cache, (uint32_t)((matching_entry->gw).s_addr));
+          if(arpentry != NULL){/* Find ARP cache matching the echo req src*/
+              return send_echo_reply(sr, interface, packet, len, arpentry);
+          }else{/* Send ARP req to find the echo req src MAC addr*/
 
+              sr_arpcache_queuereq(&(sr->cache),(uint32_t)((matching_entry->gw).s_addr),packet,           /* borrowed */
+                                           len,/*matching_entry->interface*/interface);
+              return 0;
+
+          }
 
         }else if(ip_proto == 0x0006 || ip_proto == 0x11){ /* TCP/UDP, Send ICMP Port Unreachable */
           printf("This packet is for me(TCP/UDP), send port unreachable back...\n");
@@ -195,6 +207,7 @@ int sr_handleIPpacket(struct sr_instance* sr,
             /* Check if TTL is 0 or 1, send Time out accordingly. */
         if(ip_packet->ip_ttl == 1 || ip_packet->ip_ttl == 0){
             printf("TTL too short, send ICMP\n");
+            /* Check arp cache before send back...*/
             return sendICMPmessage(sr, 11, 0, interface, packet);
         }
         printf("This packet should be forwarded..\n");
@@ -228,13 +241,10 @@ int sr_handleIPpacket(struct sr_instance* sr,
 
             }else{/* Hit */
                 printf("Hit in ARP cahce table...\n");
-                /*uint8_t *temp_dhost = malloc(sizeof(uint8_t) * ETHER_ADDR_LEN);*/
-                /*memcpy(temp_dhost, ((sr_ethernet_hdr_t *)packet)->ether_dhost, ETHER_ADDR_LEN);*/
+
                 memcpy(((sr_ethernet_hdr_t *)packet)->ether_dhost, (uint8_t *) arpentry->mac, ETHER_ADDR_LEN);
-                /* Problem... should be gw as src not original dest*/
                 struct sr_if* forward_src_iface = sr_get_interface(sr, matching_entry->interface);
                 memcpy(((sr_ethernet_hdr_t *)packet)->ether_shost, forward_src_iface->addr, ETHER_ADDR_LEN);
-                /*free(temp_dhost);*/
                 free(arpentry);
               
                 return sr_send_packet(sr,packet, len, matching_entry->interface);
@@ -308,11 +318,36 @@ int sr_handleARPpacket(struct sr_instance* sr,
           nxt = pkt->next;
           if (pkt->buf){
               sr_ethernet_hdr_t * pack = (sr_ethernet_hdr_t *) (pkt->buf);
-            
+              
+              sr_ip_hdr_t *ip_packet = (sr_ip_hdr_t*) (pkt->buf + sizeof(sr_ethernet_hdr_t));
+              uint8_t ip_proto = ip_protocol((uint8_t *) ip_packet);
+              sr_icmp_hdr_t *icmp_packet = (sr_icmp_hdr_t *) ((pkt->buf) + sizeof(sr_ethernet_hdr_t)+ sizeof(sr_ip_hdr_t));
+              
+              /* Handle echo req */
+              if (ip_proto == ip_protocol_icmp) { 
+                if(icmp_packet->icmp_type == 8){
+
+                    uint32_t temp_ip_src = ip_packet->ip_src;
+                    ip_packet->ip_src = ip_packet->ip_dst;
+                    ip_packet->ip_dst = temp_ip_src;
+                    ip_packet->ip_sum = 0;
+                    ip_packet->ip_sum = cksum((uint8_t *) ip_packet, sizeof(sr_ip_hdr_t));
+                    icmp_packet->icmp_type = 0;
+                    icmp_packet->icmp_sum = 0;
+                    icmp_packet->icmp_sum = cksum(icmp_packet, ntohs(ip_packet->ip_len) - (ip_packet->ip_hl * 4));
+
+                    memcpy(pack->ether_dhost, arp_packet->ar_sha, ETHER_ADDR_LEN);
+                    memcpy(pack->ether_shost, arp_packet->ar_tha, ETHER_ADDR_LEN);
+                    printf("Sending outstanding packet.. \n");
+                    sr_send_packet(sr, pkt->buf, pkt->len, interface);
+                }
+              }
+
               memcpy(pack->ether_dhost, arp_packet->ar_sha, ETHER_ADDR_LEN);
               memcpy(pack->ether_shost, arp_packet->ar_tha, ETHER_ADDR_LEN);
               printf("Sending outstanding packet.. \n");
-              sr_send_packet(sr, pkt->buf, pkt->len, interface);             
+              sr_send_packet(sr, pkt->buf, pkt->len, interface);
+                         
           }
       }
       sr_arpreq_destroy(cache, cached_req);
@@ -354,11 +389,11 @@ struct sr_if* checkDestIsIface(uint32_t ip, struct sr_instance* sr){
 
 
 /* Send original packet back */
-int send_echo_reply(struct sr_instance* sr,char* iface, uint8_t * ori_packet, unsigned int len){
+int send_echo_reply(struct sr_instance* sr,char* iface, uint8_t * ori_packet, unsigned int len,struct sr_arpentry* arpentry){
 
   uint8_t *temp_dhost = malloc(sizeof(uint8_t) * ETHER_ADDR_LEN);
   memcpy(temp_dhost, ((sr_ethernet_hdr_t *)ori_packet)->ether_dhost, ETHER_ADDR_LEN);
-  memcpy(((sr_ethernet_hdr_t *)ori_packet)->ether_dhost, ((sr_ethernet_hdr_t *)ori_packet)->ether_shost, ETHER_ADDR_LEN);
+  memcpy(((sr_ethernet_hdr_t *)ori_packet)->ether_dhost, (uint8_t *) arpentry->mac, ETHER_ADDR_LEN);
   memcpy(((sr_ethernet_hdr_t *)ori_packet)->ether_shost, temp_dhost, ETHER_ADDR_LEN);
   free(temp_dhost);
 
